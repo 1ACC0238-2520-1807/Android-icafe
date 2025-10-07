@@ -38,7 +38,7 @@ import com.example.icafe.ui.theme.ColorIcafe
 import com.example.icafe.ui.theme.ICafeTheme
 
 @Composable
-fun Login(onSubmit: () -> Unit) {
+fun Login(onSubmit: () -> Unit,onRegister: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -115,7 +115,7 @@ fun Login(onSubmit: () -> Unit) {
         }
 
         TextButton(
-            onClick = {},
+            onClick = {onRegister()},
             colors = ButtonDefaults.textButtonColors(
                 contentColor = ColorIcafe
             )
@@ -132,6 +132,6 @@ fun Login(onSubmit: () -> Unit) {
 @Composable
 fun LoginPreview() {
     ICafeTheme {
-        Login{}
+        Login(onSubmit = {}, onRegister = {})
     }
 }

@@ -1,4 +1,4 @@
-package com.example.icafe.features.auth.presentation.login
+package com.example.icafe.features.auth.presentation.register
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -140,14 +140,14 @@ fun Register(onSubmit: () -> Unit) {
                 contentColor = Color.White
             )
         ) {
-            Text("Login")
+            Text("Registrarse")
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 imageVector = Icons.Default.ArrowForward,
                 contentDescription = null,
             )
         }
-
+/*
         TextButton(
             onClick = {},
             colors = ButtonDefaults.textButtonColors(
@@ -158,7 +158,7 @@ fun Register(onSubmit: () -> Unit) {
                 style = TextStyle(
                     textDecoration = Underline
                 ))
-        }
+        }*/
     }
 }
 
