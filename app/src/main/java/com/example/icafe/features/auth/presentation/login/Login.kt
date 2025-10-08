@@ -1,129 +1,115 @@
 package com.example.icafe.features.auth.presentation.login
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextDecoration.Companion.Underline
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.icafe.R
 import com.example.icafe.ui.theme.ColorIcafe
 import com.example.icafe.ui.theme.ICafeTheme
 
 @Composable
-fun Login(onSubmit: () -> Unit,onRegister: () -> Unit) {
+fun Login(
+    viewModel: LoginViewModel = viewModel(),
+    onSubmit: (userId: Long) -> Unit,
+    onRegister: () -> Unit
+) {
+    val uiState = viewModel.uiState
+
+    LaunchedEffect(key1 = uiState) {
+        if (uiState is LoginUiState.Success) {
+            onSubmit(uiState.userId)
+        }
+    }
+
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Image(
                 painterResource(R.drawable.logoicafe),
-                contentDescription = null,
+                contentDescription = "Logo iCafe",
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(100.dp)
                     .padding(bottom = 8.dp),
-                contentScale = ContentScale.FillWidth
+                contentScale = ContentScale.Fit
             )
             Text(
-                text="iCafe",
+                text = "iCafe",
                 color = ColorIcafe,
                 fontSize = 60.sp,
-                modifier = Modifier.padding(top = 25.dp)
             )
         }
-        Spacer(modifier = Modifier.height(100.dp))
+
+        Spacer(modifier = Modifier.height(50.dp))
 
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            leadingIcon ={
-                Icon(
-                    Icons.Default.Email,
-                    contentDescription = null
-                )
-            },
-            placeholder = {
-                Text("Email")
-            }
+            value = viewModel.email,
+            onValueChange = { viewModel.email = it },
+            label = { Text("Email") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            singleLine = true
         )
+        Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            placeholder = {
-                Text("Password")
-            },
-            singleLine = true,
-            leadingIcon = {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription = null
-                )
-            }
+            value = viewModel.password,
+            onValueChange = { viewModel.password = it },
+            label = { Text("Contraseña") },
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            singleLine = true
         )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (uiState is LoginUiState.Error) {
+            Text(
+                text = uiState.message,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
 
         Button(
-            onClick = { onSubmit() },
-            modifier = Modifier
-                .width(280.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = ColorIcafe,
-                contentColor = Color.White
-            )
+            onClick = { viewModel.login() },
+            enabled = uiState !is LoginUiState.Loading,
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = ColorIcafe)
         ) {
-            Text("Login")
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.Default.ArrowForward,
-                contentDescription = null,
-            )
+            if (uiState is LoginUiState.Loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = Color.White
+                )
+            } else {
+                Text("Iniciar Sesión", color = Color.White)
+            }
         }
 
-        TextButton(
-            onClick = {onRegister()},
-            colors = ButtonDefaults.textButtonColors(
-                contentColor = ColorIcafe
-            )
-        ) {
-            Text("Registrarse",
-                style = TextStyle(
-                    textDecoration = Underline
-                ))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        TextButton(onClick = onRegister) {
+            Text("¿No tienes cuenta? Regístrate")
         }
     }
 }

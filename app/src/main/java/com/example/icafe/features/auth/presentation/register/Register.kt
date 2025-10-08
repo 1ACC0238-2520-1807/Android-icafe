@@ -1,164 +1,152 @@
 package com.example.icafe.features.auth.presentation.register
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextDecoration.Companion.Underline
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.icafe.R
 import com.example.icafe.ui.theme.ColorIcafe
 import com.example.icafe.ui.theme.ICafeTheme
 
 @Composable
-fun Register(onSubmit: () -> Unit) {
+fun Register(
+    viewModel: RegisterViewModel = viewModel(),
+    onSubmit: () -> Unit
+) {
+    val uiState = viewModel.uiState
+
+    LaunchedEffect(key1 = uiState) {
+        if (uiState is RegisterUiState.Success) {
+            onSubmit()
+        }
+    }
+
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Image(
                 painterResource(R.drawable.logoicafe),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(100.dp)
                     .padding(bottom = 8.dp),
-                contentScale = ContentScale.FillWidth
+                contentScale = ContentScale.Fit
             )
             Text(
-                text="iCafe",
+                text = "iCafe",
                 color = ColorIcafe,
                 fontSize = 60.sp,
-                modifier = Modifier.padding(top = 25.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(100.dp))
+        Spacer(modifier = Modifier.height(50.dp))
 
+        // --- CAMPO EMAIL ---
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            leadingIcon ={
-                Icon(
-                    Icons.Default.Person,
-                    contentDescription = null
-                )
-            },
-            placeholder = {
-                Text("Nombre de Cafeteria")
-            }
-        )
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            leadingIcon ={
+            value = viewModel.email,
+            onValueChange = { viewModel.email = it },
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = {
                 Icon(
                     Icons.Default.Email,
                     contentDescription = null
                 )
             },
-            placeholder = {
-                Text("Email")
-            }
+            placeholder = { Text("Email") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // --- CAMPO PASSWORD ---
+        OutlinedTextField(
+            value = viewModel.password,
+            onValueChange = { viewModel.password = it },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Contraseña") },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Lock,
+                    contentDescription = null
+                )
+            },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // --- CAMPO CONFIRMAR PASSWORD ---
+        OutlinedTextField(
+            value = viewModel.confirmPassword,
+            onValueChange = { viewModel.confirmPassword = it },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Confirmar Contraseña") },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Lock,
+                    contentDescription = null
+                )
+            },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            singleLine = true
         )
 
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            placeholder = {
-                Text("Password")
-            },
-            singleLine = true,
-            leadingIcon = {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription = null
-                )
-            }
-        )
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            placeholder = {
-                Text("Confirme Password")
-            },
-            singleLine = true,
-            leadingIcon = {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription = null
-                )
-            }
-        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (uiState is RegisterUiState.Error) {
+            Text(
+                text = uiState.message,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
 
         Button(
-            onClick = { onSubmit() },
+            onClick = { viewModel.register() },
+            enabled = uiState !is RegisterUiState.Loading,
             modifier = Modifier
-                .width(280.dp),
+                .fillMaxWidth()
+                .height(50.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = ColorIcafe,
                 contentColor = Color.White
             )
         ) {
-            Text("Registrarse")
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = Icons.Default.ArrowForward,
-                contentDescription = null,
-            )
+            if (uiState is RegisterUiState.Loading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+            } else {
+                Text("Registrarse")
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = null,
+                )
+            }
         }
-/*
-        TextButton(
-            onClick = {},
-            colors = ButtonDefaults.textButtonColors(
-                contentColor = ColorIcafe
-            )
-        ) {
-            Text("ir a Login",
-                style = TextStyle(
-                    textDecoration = Underline
-                ))
-        }*/
     }
 }
 
@@ -166,6 +154,6 @@ fun Register(onSubmit: () -> Unit) {
 @Composable
 fun RegisterPreview() {
     ICafeTheme {
-        Register{}
+        Register {}
     }
 }
