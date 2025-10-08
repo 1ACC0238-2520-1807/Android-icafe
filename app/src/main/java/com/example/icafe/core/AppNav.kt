@@ -45,11 +45,18 @@ fun AppNav() {
             )
         }
         composable(Route.Register.route) {
-            Register {
-                navController.navigate(Route.Login.route) {
-                    popUpTo(Route.Login.route) { inclusive = true }
+            Register(
+                onSubmit = {
+                    navController.navigate(Route.Login.route) {
+                        popUpTo(Route.Login.route) { inclusive = true }
+                    }
+                },
+                onBackToLogin = {
+                    navController.navigate(Route.Login.route) {
+                        popUpTo(Route.Register.route) { inclusive = true }
+                    }
                 }
-            }
+            )
         }
 
         // --- Pantalla Principal ---
