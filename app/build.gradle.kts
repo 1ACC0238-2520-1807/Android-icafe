@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    //ingresar los plugins de ksp y hilt
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
@@ -36,10 +35,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    /*
-    kotlinOptions {
-        jvmTarget = "11"
-    }*/
     kotlin {
         compilerOptions {
             jvmTarget = JvmTarget.JVM_11
@@ -68,26 +63,24 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // Extended Material Design 3 - ingresado
     implementation(libs.material.extended)
 
-    // Navigation - ingresado
     implementation(libs.androidx.navigation.compose)
-    // Coil - ingresado
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
-    // Retrofit - ingresado
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation(libs.androidx.lifecycle.viewmodel)
 
-    // Room - ingresado
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
-    //hilt - ingresado
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
+
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 }
