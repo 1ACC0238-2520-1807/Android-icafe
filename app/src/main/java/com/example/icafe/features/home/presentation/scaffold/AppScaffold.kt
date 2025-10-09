@@ -40,7 +40,7 @@ fun AppScaffold(
         NavigationItem(label = "Gestion Costos", route = "Costos"),
         // --- LÍNEA CORREGIDA AQUÍ ---
         NavigationItem(label = "Registro Insumos", route = Route.ItemList.route),
-        NavigationItem(label = "Registro Productos", route = Route.Product.route),
+        NavigationItem(label = "Registro Productos", route = Route.ProductList.route),
         NavigationItem(label = "Inventario", route = Route.Inventory.route),
         NavigationItem(label = "Cerrar Sesión", route = Route.Login.route)
     )

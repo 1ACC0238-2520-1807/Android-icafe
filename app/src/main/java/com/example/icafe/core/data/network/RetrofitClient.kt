@@ -6,6 +6,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.example.icafe.features.inventory.data.network.InventoryApiService
+import com.example.icafe.features.products.data.network.ProductApiService
 
 object RetrofitClient {
     private const val BASE_URL = "http://upc-icafebackend-3sger0-aa823d-31-97-13-234.traefik.me/"
@@ -37,6 +38,10 @@ object RetrofitClient {
 
     val inventoryApi: InventoryApiService by lazy {
         retrofit.create(InventoryApiService::class.java)
+    }
+
+    val productApi: ProductApiService by lazy {
+        retrofit.create(ProductApiService::class.java)
     }
 
 }

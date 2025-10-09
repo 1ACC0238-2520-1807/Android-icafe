@@ -83,7 +83,7 @@ fun HomeScreen(navController: NavController, sedeId: String) {
                     modifier = Modifier.weight(1f),
                     title = "Registro Productos",
                     icon = rememberVectorPainter(image = Icons.Default.LocalCafe),
-                    onClick = { /* Navegar a registro productos */ }
+                    onClick = { navController.navigate(Route.ProductList.route) }
                 )
             }
 

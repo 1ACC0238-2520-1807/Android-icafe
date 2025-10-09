@@ -28,7 +28,8 @@ import com.example.icafe.ui.theme.ICafeTheme
 @Composable
 fun Register(
     viewModel: RegisterViewModel = viewModel(),
-    onSubmit: () -> Unit
+    onSubmit: () -> Unit,
+    onBackToLogin: () -> Unit = {}
 ) {
     val uiState = viewModel.uiState
 
@@ -147,6 +148,12 @@ fun Register(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        TextButton(onClick = onBackToLogin) {
+            Text("Ya tengo una cuenta")
+        }
     }
 }
 
@@ -154,6 +161,6 @@ fun Register(
 @Composable
 fun RegisterPreview() {
     ICafeTheme {
-        Register {}
+        Register(onSubmit = {}, onBackToLogin = {})
     }
 }
