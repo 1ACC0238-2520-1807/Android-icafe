@@ -23,6 +23,10 @@ import com.example.icafe.features.contacts.presentation.provider.ProviderListScr
 import com.example.icafe.features.inventory.presentation.item.AddEditItemScreen
 import com.example.icafe.features.inventory.presentation.item.ItemListScreen
 
+// --- IMPORTS AÑADIDOS PARA PRODUCTOS ---
+import com.example.icafe.features.products.presentation.ProductListScreen
+import com.example.icafe.features.products.presentation.AddEditProductScreen
+
 // Import para Home
 import com.example.icafe.features.home.presentation.home.HomeScreen
 
@@ -166,6 +170,21 @@ fun AppNav() {
             val itemId = backStackEntry.arguments?.getString("itemId")!!.toLong()
             AddEditItemScreen(navController, itemId = itemId)
         }
+
+        // --- Flujo de Productos ---
+        composable(Route.ProductList.route) {
+            ProductListScreen(navController)
+        }
+        composable(Route.AddProduct.route) {
+            AddEditProductScreen(navController, productId = null)
+        }
+        composable(
+            route = Route.EditProduct.route,
+            arguments = listOf(navArgument("productId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId")!!.toLong()
+            AddEditProductScreen(navController, productId = productId)
+        }
     }
 }
 
@@ -216,7 +235,17 @@ sealed class Route(val route: String) {
         fun createRoute(itemId: Long) = "item_edit/$itemId"
     }
 
+    // Rutas para Productos
+    object ProductList : Route("product_list")
+    object AddProduct : Route("product_add")
+    object ProductDetail : Route("product_detail/{productId}") {
+        fun createRoute(productId: Long) = "product_detail/$productId"
+    }
+    object EditProduct : Route("product_edit/{productId}") {
+        fun createRoute(productId: Long) = "product_edit/$productId"
+    }
+
     // Rutas para otras secciones
-    object Product : Route("product")
+    object Product : Route("product") // Mantener por compatibilidad con el scaffold
     object Inventory : Route("inventory")
 }
