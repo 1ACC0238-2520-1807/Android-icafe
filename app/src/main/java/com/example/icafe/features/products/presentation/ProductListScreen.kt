@@ -7,7 +7,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -28,14 +27,17 @@ import com.example.icafe.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductListScreen(navController: NavController) {
-    val viewModel: ProductListViewModel = viewModel()
+fun ProductListScreen(navController: NavController, portfolioId: String, selectedSedeId: String) { // MODIFIED: Added portfolioId
+    val viewModel: ProductListViewModel = viewModel(
+        factory = ProductListViewModelFactory(portfolioId, selectedSedeId) // MODIFIED: Pass portfolioId
+    )
     val uiState by viewModel.uiState.collectAsState()
 
     AppScaffold(
         title = "Productos",
         navController = navController,
-        portfolioId = null
+        portfolioId = portfolioId, // MODIFIED: Pass portfolioId
+        selectedSedeId = selectedSedeId
     ) {
         Column(
             modifier = Modifier
@@ -45,7 +47,7 @@ fun ProductListScreen(navController: NavController) {
         ) {
             // Botón "Agregar Producto" en la parte superior
             Button(
-                onClick = { navController.navigate(Route.AddProduct.route) },
+                onClick = { navController.navigate(Route.AddProduct.createRoute(portfolioId, selectedSedeId)) }, // MODIFIED: Pass portfolioId
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -95,14 +97,13 @@ fun ProductListScreen(navController: NavController) {
                         fontSize = 16.sp
                     )
                 }
-                
+
                 // Espacio para el botón "Ver más"
                 Spacer(modifier = Modifier.width(100.dp))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Contenido principal (Lista, Carga o Error)
             Box(modifier = Modifier.weight(1f)) {
                 when (val state = uiState) {
                     is ProductListUiState.Loading -> {
@@ -168,11 +169,11 @@ fun ProductListScreen(navController: NavController) {
                             LazyColumn(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                items(state.products) { product ->
+                                items(state.products, key = { it.id }) { product ->
                                     ProductTableItem(
                                         product = product,
                                         onClick = {
-                                            navController.navigate(Route.ProductDetail.createRoute(product.id))
+                                            navController.navigate(Route.ProductDetail.createRoute(portfolioId, selectedSedeId, product.id)) // MODIFIED: Pass portfolioId
                                         }
                                     )
                                 }
@@ -208,7 +209,7 @@ fun ProductTableItem(
                 color = Color.Black
             )
         }
-        
+
         // Botón "Ver más"
         Button(
             onClick = onClick,

@@ -21,23 +21,27 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.icafe.core.Route
 import com.example.icafe.features.home.presentation.scaffold.AppScaffold
-import com.example.icafe.features.inventory.data.network.ItemResource
+import com.example.icafe.features.inventory.data.network.SupplyItemResource // Usar SupplyItemResource
+import com.example.icafe.ui.theme.LightGrayBackground
 import com.example.icafe.ui.theme.OffWhiteBackground
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemListScreen(navController: NavController) {
-    val viewModel: ItemListViewModel = viewModel()
+fun ItemListScreen(navController: NavController, portfolioId: String, selectedSedeId: String) { // MODIFIED: Add portfolioId
+    val viewModel: ItemListViewModel = viewModel(
+        factory = ItemListViewModelFactory(portfolioId, selectedSedeId) // MODIFIED: Pass portfolioId
+    )
     val uiState by viewModel.uiState.collectAsState()
 
     AppScaffold(
         title = "Insumos",
         navController = navController,
-        portfolioId = null
+        portfolioId = portfolioId, // MODIFIED: Pass portfolioId to AppScaffold
+        selectedSedeId = selectedSedeId
     ) {
         Scaffold(
             floatingActionButton = {
-                FloatingActionButton(onClick = { navController.navigate(Route.AddItem.route) }) {
+                FloatingActionButton(onClick = { navController.navigate(Route.AddItem.createRoute(portfolioId, selectedSedeId)) }) { // MODIFIED: Pass portfolioId
                     Icon(Icons.Default.Add, contentDescription = "Agregar Insumo")
                 }
             }
@@ -63,9 +67,9 @@ fun ItemListScreen(navController: NavController) {
                                     }
                                     Divider(modifier = Modifier.padding(top = 8.dp))
                                 }
-                                items(state.items) { item ->
+                                items(state.items, key = { it.id }) { item ->
                                     ItemRow(item = item) {
-                                        navController.navigate(Route.ItemDetail.createRoute(item.id))
+                                        navController.navigate(Route.ItemDetail.createRoute(portfolioId, selectedSedeId, item.id)) // MODIFIED: Pass portfolioId
                                     }
                                 }
                             }
@@ -79,7 +83,7 @@ fun ItemListScreen(navController: NavController) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemRow(item: ItemResource, onClick: () -> Unit) {
+fun ItemRow(item: SupplyItemResource, onClick: () -> Unit) { // Usar SupplyItemResource
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -91,12 +95,12 @@ fun ItemRow(item: ItemResource, onClick: () -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(item.nombre, Modifier.weight(2f), style = MaterialTheme.typography.bodyLarge)
+            Text(item.name, Modifier.weight(2f), style = MaterialTheme.typography.bodyLarge) // Usar item.name
             Text(
-                text = "${item.cantidadActual} ${item.unidadMedida.name.lowercase()}",
+                text = "${item.stock} ${item.unit.lowercase()}", // Usar item.stock y item.unit
                 Modifier.weight(1f),
                 textAlign = TextAlign.End,
-                color = if (item.requiereReabastecimiento) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface // Color predeterminado por ahora
             )
         }
     }

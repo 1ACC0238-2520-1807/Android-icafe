@@ -4,49 +4,48 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.icafe.features.contacts.presentation.employee.StyledTextField
 import com.example.icafe.features.home.presentation.scaffold.AppScaffold
-import com.example.icafe.features.inventory.data.network.ItemResource
-import com.example.icafe.features.inventory.data.network.UnitMeasureType
-import com.example.icafe.ui.theme.*
+import com.example.icafe.features.inventory.data.network.SupplyItemResource
+import com.example.icafe.ui.theme.OffWhiteBackground
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditProductScreen(
     navController: NavController,
-    productId: Long? = null
+    portfolioId: String, // MODIFIED: Added portfolioId
+    selectedSedeId: String,
+    productId: Long?
 ) {
-    val viewModel: AddEditProductViewModel = viewModel()
+    val viewModel: AddEditProductViewModel = viewModel(factory = AddEditProductViewModel.Factory(portfolioId, selectedSedeId, productId))
     val uiState by viewModel.uiState.collectAsState()
     val formState by viewModel.formState.collectAsState()
 
-    // Inicializar el ViewModel con el ID del producto
-    LaunchedEffect(productId) {
-        viewModel.setProductId(productId)
-    }
-
-    val isEditMode = productId != null
-    val screenTitle = if (isEditMode) "Editar Producto" else "Agregar Producto"
-
     AppScaffold(
-        title = screenTitle,
+        title = if (productId == null) "Agregar Producto" else "Editar Producto",
         navController = navController,
-        portfolioId = null
+        portfolioId = portfolioId, // MODIFIED: Pass portfolioId to AppScaffold
+        selectedSedeId = selectedSedeId
     ) {
         Column(
             modifier = Modifier
@@ -54,249 +53,90 @@ fun AddEditProductScreen(
                 .background(OffWhiteBackground)
                 .padding(16.dp)
         ) {
-            when (val state = uiState) {
-                is AddEditProductUiState.LoadingItems -> {
-                    // Mostrar formulario básico mientras cargan los insumos
-                    LazyColumn(
+            when (uiState) {
+                is AddEditProductUiState.Loading, is AddEditProductUiState.LoadingSupplyItems -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                }
+                is AddEditProductUiState.Success, is AddEditProductUiState.Error, is AddEditProductUiState.Editing -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f), // Occupy available space, allowing scrolling
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        item {
-                            ProductBasicInfo(
-                                name = formState.name,
-                                onNameChange = viewModel::updateName,
-                                category = formState.category,
-                                onCategoryChange = viewModel::updateCategory,
-                                portions = formState.portions,
-                                onPortionsChange = viewModel::updatePortions,
-                                steps = formState.steps,
-                                onStepsChange = viewModel::updateSteps
-                            )
-                        }
+                        StyledTextField(
+                            label = "Nombre del Producto",
+                            value = formState.name,
+                            onValueChange = { viewModel.updateName(it) }
+                        )
+                        StyledTextField(
+                            label = "Precio de Costo",
+                            value = formState.costPrice,
+                            onValueChange = { viewModel.updateCostPrice(it) },
+                            keyboardType = KeyboardType.Number
+                        )
+                        StyledTextField(
+                            label = "Margen de Ganancia (%)",
+                            value = formState.profitMargin,
+                            onValueChange = { viewModel.updateProfitMargin(it) },
+                            keyboardType = KeyboardType.Number
+                        )
 
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Text(
-                                        text = "Insumos Disponibles",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = BrownDark
-                                    )
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularProgressIndicator(color = OliveGreen, modifier = Modifier.size(24.dp))
-                                    }
-                                    Text(
-                                        text = "Cargando insumos disponibles...",
-                                        color = Color.Gray,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                            }
-                        }
+                        Text("Ingredientes:", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White)
+                        // Selected Ingredients List
+                        if (formState.selectedIngredients.isEmpty()) {
+                            Text("No hay ingredientes añadidos.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 200.dp) // Limit height for scrolling
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Text(
-                                        text = "Ingredientes Seleccionados",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = BrownDark
-                                    )
-                                    Text(
-                                        text = "No hay ingredientes seleccionados",
-                                        color = Color.Gray,
-                                        style = MaterialTheme.typography.bodyMedium
+                                items(formState.selectedIngredients, key = { it.supplyItemId }) { ingredient ->
+                                    IngredientDisplayItem(
+                                        ingredient = ingredient,
+                                        onQuantityChange = { newQty ->
+                                            formState.availableSupplyItems.find { it.id == ingredient.supplyItemId }?.let { supplyItem ->
+                                                viewModel.addOrUpdateIngredient(supplyItem, newQty)
+                                            }
+                                        },
+                                        onRemove = { viewModel.removeIngredientFromForm(ingredient.supplyItemId) }
                                     )
                                 }
                             }
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            Button(
-                                onClick = { viewModel.saveProduct() },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
-                                enabled = false // Deshabilitado mientras cargan los insumos
-                            ) {
-                                Text(
-                                    text = if (isEditMode) "Actualizar Producto" else "Crear Producto",
-                                    color = Color.White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                        // Add Ingredient Section
+                        AddIngredientSection(
+                            availableSupplyItems = formState.availableSupplyItems,
+                            onAddIngredient = { supplyItem, quantity -> viewModel.addOrUpdateIngredient(supplyItem, quantity) }
+                        )
                     }
-                }
-                is AddEditProductUiState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+
+                    Button(
+                        onClick = { viewModel.saveProduct() },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        enabled = uiState !is AddEditProductUiState.Loading // Disable button when loading
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator(color = OliveGreen)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Guardando producto...", color = Color.Gray)
+                        if (uiState is AddEditProductUiState.Loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        } else {
+                            Text(if (productId == null) "Guardar Producto" else "Actualizar Producto")
                         }
                     }
-                }
-                is AddEditProductUiState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = state.message,
-                                color = MaterialTheme.colorScheme.error,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                modifier = Modifier.padding(16.dp)
-                            )
-                            Button(
-                                onClick = { navController.navigateUp() },
-                                colors = ButtonDefaults.buttonColors(containerColor = OliveGreen)
-                            ) {
-                                Text("Volver", color = Color.White)
-                            }
-                        }
-                    }
-                }
-                is AddEditProductUiState.Success -> {
-                    if (state.message.isNotEmpty()) {
-                        // Mostrar mensaje de éxito y navegar de vuelta
-                        LaunchedEffect(state.message) {
-                            navController.navigateUp()
-                        }
-                    } else {
-                        // Mostrar formulario cuando se cargan los insumos
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            item {
-                                ProductBasicInfo(
-                                    name = formState.name,
-                                    onNameChange = viewModel::updateName,
-                                    category = formState.category,
-                                    onCategoryChange = viewModel::updateCategory,
-                                    portions = formState.portions,
-                                    onPortionsChange = viewModel::updatePortions,
-                                    steps = formState.steps,
-                                    onStepsChange = viewModel::updateSteps
-                                )
-                            }
 
-                            item {
-                                AvailableItemsSection(
-                                    availableItems = formState.availableItems,
-                                    onAddComponent = viewModel::addComponent
-                                )
-                            }
-
-                            item {
-                                SelectedComponentsSection(
-                                    selectedComponents = formState.selectedComponents,
-                                    onRemoveComponent = viewModel::removeComponent
-                                )
-                            }
-
-                            item {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                Button(
-                                    onClick = { viewModel.saveProduct() },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
-                                    enabled = formState.name.isNotBlank() && 
-                                             formState.category.isNotBlank() && 
-                                             formState.selectedComponents.isNotEmpty()
-                                ) {
-                                    Text(
-                                        text = if (isEditMode) "Actualizar Producto" else "Crear Producto",
-                                        color = Color.White,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                    // Display success or error messages
+                    if (uiState is AddEditProductUiState.Success) {
+                        Text((uiState as AddEditProductUiState.Success).message, color = MaterialTheme.colorScheme.primary)
+                        // Trigger navigation back after a short delay or user acknowledgment
+                        LaunchedEffect(Unit) {
+                            navController.popBackStack() // Navigate back on success
                         }
-                    }
-                }
-                is AddEditProductUiState.Editing -> {
-                    // Mostrar formulario en modo edición
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        item {
-                            ProductBasicInfo(
-                                name = formState.name,
-                                onNameChange = viewModel::updateName,
-                                category = formState.category,
-                                onCategoryChange = viewModel::updateCategory,
-                                portions = formState.portions,
-                                onPortionsChange = viewModel::updatePortions,
-                                steps = formState.steps,
-                                onStepsChange = viewModel::updateSteps
-                            )
-                        }
-
-                        item {
-                            AvailableItemsSection(
-                                availableItems = formState.availableItems,
-                                onAddComponent = viewModel::addComponent
-                            )
-                        }
-
-                        item {
-                            SelectedComponentsSection(
-                                selectedComponents = formState.selectedComponents,
-                                onRemoveComponent = viewModel::removeComponent
-                            )
-                        }
-
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            Button(
-                                onClick = { viewModel.saveProduct() },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
-                                enabled = formState.name.isNotBlank() && 
-                                         formState.category.isNotBlank() && 
-                                         formState.selectedComponents.isNotEmpty()
-                            ) {
-                                Text(
-                                    text = if (isEditMode) "Actualizar Producto" else "Crear Producto",
-                                    color = Color.White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                    } else if (uiState is AddEditProductUiState.Error) {
+                        Text((uiState as AddEditProductUiState.Error).message, color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -304,306 +144,103 @@ fun AddEditProductScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductBasicInfo(
-    name: String,
-    onNameChange: (String) -> Unit,
-    category: String,
-    onCategoryChange: (String) -> Unit,
-    portions: Int,
-    onPortionsChange: (Int) -> Unit,
-    steps: String,
-    onStepsChange: (String) -> Unit
+fun AddIngredientSection(
+    availableSupplyItems: List<SupplyItemResource>,
+    onAddIngredient: (SupplyItemResource, String) -> Unit
 ) {
-    Card(
+    var selectedSupplyItem by remember { mutableStateOf<SupplyItemResource?>(null) }
+    var quantityText by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Text("Añadir nuevo ingrediente:", style = MaterialTheme.typography.titleSmall)
+
+        // Dropdown for selecting Supply Item
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
         ) {
-            Text(
-                text = "Información Básica",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = BrownDark
-            )
-
             OutlinedTextField(
-                value = name,
-                onValueChange = onNameChange,
-                label = { Text("Nombre del Producto") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                value = selectedSupplyItem?.name ?: "Seleccionar Insumo",
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.menuAnchor().fillMaxWidth()
             )
-
-            OutlinedTextField(
-                value = category,
-                onValueChange = onCategoryChange,
-                label = { Text("Categoría") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
             ) {
-                OutlinedTextField(
-                    value = portions.toString(),
-                    onValueChange = { 
-                        val newValue = it.toIntOrNull() ?: 1
-                        if (newValue > 0) onPortionsChange(newValue)
-                    },
-                    label = { Text("Porciones") },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
-            }
-
-            OutlinedTextField(
-                value = steps,
-                onValueChange = onStepsChange,
-                label = { Text("Pasos de Preparación") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                maxLines = 5
-            )
-        }
-    }
-}
-
-@Composable
-fun AvailableItemsSection(
-    availableItems: List<ItemResource>,
-    onAddComponent: (ItemResource, Double) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Insumos Disponibles",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = BrownDark
-            )
-
-            Text(
-                text = "Selecciona los insumos que necesitas para tu producto:",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray
-            )
-
-            if (availableItems.isEmpty()) {
-                Text(
-                    text = "No hay insumos disponibles. Primero registra algunos insumos.",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            } else {
-                availableItems.forEach { item ->
-                    ItemSelectorCard(
-                        item = item,
-                        onAddComponent = onAddComponent
+                availableSupplyItems.forEach { item ->
+                    DropdownMenuItem(
+                        text = { Text(item.name) },
+                        onClick = {
+                            selectedSupplyItem = item
+                            expanded = false
+                        }
                     )
                 }
             }
         }
-    }
-}
 
-@Composable
-fun ItemSelectorCard(
-    item: ItemResource,
-    onAddComponent: (ItemResource, Double) -> Unit
-) {
-    var quantity by remember { mutableStateOf("") }
-    var showQuantityDialog by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = LightGrayBackground)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.nombre,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = BrownDark
-                )
-                Text(
-                    text = "Stock: ${item.cantidadActual} ${item.unidadMedida.name.lowercase()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
-
-            Button(
-                onClick = { showQuantityDialog = true },
-                colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text("Agregar", color = Color.White, fontSize = 12.sp)
-            }
-        }
-    }
-
-    if (showQuantityDialog) {
-        QuantityInputDialog(
-            item = item,
-            onConfirm = { qty ->
-                onAddComponent(item, qty)
-                showQuantityDialog = false
-            },
-            onDismiss = { showQuantityDialog = false }
+        StyledTextField(
+            label = "Cantidad requerida",
+            value = quantityText,
+            onValueChange = { quantityText = it },
+            keyboardType = KeyboardType.Number
         )
-    }
-}
 
-@Composable
-fun QuantityInputDialog(
-    item: ItemResource,
-    onConfirm: (Double) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var quantity by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Cantidad de ${item.nombre}") },
-        text = {
-            Column {
-                Text("Ingresa la cantidad necesaria:")
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = quantity,
-                    onValueChange = { quantity = it },
-                    label = { Text("Cantidad (${item.unidadMedida.name.lowercase()})") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = "Stock disponible: ${item.cantidadActual} ${item.unidadMedida.name.lowercase()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val qty = quantity.toDoubleOrNull() ?: 0.0
-                    if (qty > 0) onConfirm(qty)
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = OliveGreen)
-            ) {
-                Text("Agregar", color = Color.White)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        }
-    )
-}
-
-@Composable
-fun SelectedComponentsSection(
-    selectedComponents: List<ProductComponentForm>,
-    onRemoveComponent: (Long) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Ingredientes Seleccionados",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = BrownDark
-            )
-
-            if (selectedComponents.isEmpty()) {
-                Text(
-                    text = "No hay ingredientes seleccionados",
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            } else {
-                selectedComponents.forEach { component ->
-                    SelectedComponentCard(
-                        component = component,
-                        onRemove = { onRemoveComponent(component.itemId) }
-                    )
+        Button(
+            onClick = {
+                selectedSupplyItem?.let { item ->
+                    if (quantityText.toDoubleOrNull() != null && quantityText.toDouble() > 0) {
+                        onAddIngredient(item, quantityText)
+                        selectedSupplyItem = null
+                        quantityText = ""
+                    }
                 }
-            }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = selectedSupplyItem != null && quantityText.toDoubleOrNull() != null && quantityText.toDouble() > 0
+        ) {
+            Text("Añadir Ingrediente")
         }
     }
 }
 
 @Composable
-fun SelectedComponentCard(
-    component: ProductComponentForm,
+fun IngredientDisplayItem(
+    ingredient: ProductIngredientForm,
+    onQuantityChange: (String) -> Unit,
     onRemove: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Peach)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
+        Column(modifier = Modifier.weight(1f).padding(8.dp)) {
+            Text(text = ingredient.supplyItemName, style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Unidad: ${ingredient.unit}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        }
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = component.itemName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = BrownDark
-                )
-                Text(
-                    text = "${component.quantity} ${component.unitMeasure.name.lowercase()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
 
-            IconButton(
-                onClick = onRemove,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Remove,
-                    contentDescription = "Remover",
-                    tint = Color.Red
-                )
+
+            Text(text = ingredient.unit, style = MaterialTheme.typography.bodySmall)
+
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Default.Delete, contentDescription = "Eliminar ingrediente", tint = Color.Red)
             }
         }
     }

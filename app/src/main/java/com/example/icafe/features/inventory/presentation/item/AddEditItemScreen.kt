@@ -3,8 +3,11 @@ package com.example.icafe.features.inventory.presentation.item
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,14 +18,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.icafe.features.contacts.presentation.employee.StyledTextField
 import com.example.icafe.features.home.presentation.scaffold.AppScaffold
-import com.example.icafe.features.inventory.data.network.UnitMeasureType
+import com.example.icafe.features.inventory.data.network.UnitMeasureType // Ahora se llama InventoryDataModels.UnitMeasureType
 import com.example.icafe.ui.theme.OffWhiteBackground
 import kotlinx.coroutines.launch
+import com.example.icafe.features.contacts.data.network.ProviderResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddEditItemScreen(navController: NavController, itemId: Long?) {
-    val viewModel: ItemDetailViewModel = viewModel()
+fun AddEditItemScreen(navController: NavController, portfolioId: String, selectedSedeId: String, itemId: Long?) {
+    val viewModel: ItemDetailViewModel = viewModel(
+        factory = ItemDetailViewModel.ItemDetailViewModelFactory(portfolioId, selectedSedeId, itemId) // Llamando a la Factory integrada
+    )
     val isEditMode = itemId != null
     val title = if (isEditMode) "Editar Insumo" else "Agregar Insumo"
 
@@ -45,11 +51,11 @@ fun AddEditItemScreen(navController: NavController, itemId: Long?) {
         }
     }
 
-    AppScaffold(title = title, navController = navController, portfolioId = null) {
+    AppScaffold(title = title, navController = navController, portfolioId = portfolioId, selectedSedeId = selectedSedeId) {
         Scaffold(
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { padding ->
-            if (viewModel.isLoading && isEditMode) {
+            if (viewModel.isLoading && isEditMode && viewModel.supplyItem == null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             } else {
                 Column(
@@ -63,40 +69,85 @@ fun AddEditItemScreen(navController: NavController, itemId: Long?) {
                 ) {
                     StyledTextField(label = "Nombre del Insumo", value = viewModel.name, onValueChange = { viewModel.name = it })
 
-                    var expanded by remember { mutableStateOf(false) }
+                    var expandedUnit by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded }
+                        expanded = expandedUnit,
+                        onExpandedChange = { expandedUnit = !expandedUnit }
                     ) {
                         OutlinedTextField(
                             value = viewModel.unit.name,
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Unidad de Medida") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUnit) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            singleLine = true
                         )
                         ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
+                            expanded = expandedUnit,
+                            onDismissRequest = { expandedUnit = false }
                         ) {
-                            UnitMeasureType.values().forEach { unit ->
+                            UnitMeasureType.values().forEach { unitEnum ->
                                 DropdownMenuItem(
-                                    text = { Text(unit.name) },
+                                    text = { Text(unitEnum.name) },
                                     onClick = {
-                                        viewModel.unit = unit
-                                        expanded = false
+                                        viewModel.unit = unitEnum
+                                        expandedUnit = false
                                     }
                                 )
                             }
                         }
                     }
 
-                    if (!isEditMode) {
-                        StyledTextField(label = "Cantidad Inicial", value = viewModel.initialQuantity, onValueChange = { viewModel.initialQuantity = it }, keyboardType = KeyboardType.Number)
+                    StyledTextField(label = "Precio Unitario", value = viewModel.unitPrice, onValueChange = { viewModel.unitPrice = it }, keyboardType = KeyboardType.Number)
+
+                    StyledTextField(label = "Stock", value = viewModel.stock, onValueChange = { viewModel.stock = it }, keyboardType = KeyboardType.Number)
+
+                    var expandedProvider by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = expandedProvider,
+                        onExpandedChange = { expandedProvider = !expandedProvider }
+                    ) {
+                        OutlinedTextField(
+                            value = viewModel.selectedProvider?.nameCompany ?: "Seleccionar Proveedor",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Proveedor") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedProvider) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            singleLine = true
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedProvider,
+                            onDismissRequest = { expandedProvider = false }
+                        ) {
+                            if (viewModel.availableProviders.isEmpty()) {
+                                DropdownMenuItem(onClick = { /* Do nothing */ }, text = { Text("No hay proveedores disponibles") })
+                            } else {
+                                viewModel.availableProviders.forEach { provider ->
+                                    DropdownMenuItem(
+                                        text = { Text(provider.nameCompany) },
+                                        onClick = {
+                                            viewModel.selectedProvider = provider
+                                            expandedProvider = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
 
-                    StyledTextField(label = "Punto de Reorden", value = viewModel.reorderPoint, onValueChange = { viewModel.reorderPoint = it }, keyboardType = KeyboardType.Number)
+                    Text("Fecha de Vencimiento (YYYY-MM-DD):", style = MaterialTheme.typography.labelLarge)
+                    OutlinedTextField(
+                        value = viewModel.dateInputText, // NEW: Use dateInputText from ViewModel
+                        onValueChange = { newDateString ->
+                            viewModel.dateInputText = newDateString // NEW: Update dateInputText directly
+                        },
+                        label = { Text("Fecha de Vencimiento") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
                     Spacer(modifier = Modifier.weight(1f))
 

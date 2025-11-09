@@ -21,8 +21,10 @@ import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.ui.theme.*
 
 @Composable
-fun EmployeeDetailScreen(navController: NavController, portfolioId: String, employeeId: Long) {
-    val viewModel: EmployeeDetailViewModel = viewModel()
+fun EmployeeDetailScreen(navController: NavController, portfolioId: String, selectedSedeId: String, employeeId: Long) {
+    val viewModel: EmployeeDetailViewModel = viewModel(
+        factory = EmployeeDetailViewModelFactory(portfolioId, selectedSedeId, employeeId)
+    )
     val employee = viewModel.employee
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -30,8 +32,8 @@ fun EmployeeDetailScreen(navController: NavController, portfolioId: String, empl
         viewModel.events.collect { event ->
             when (event) {
                 is EmployeeEvent.ActionSuccess -> {
-                    navController.navigate(Route.EmployeeList.createRoute(portfolioId)) {
-                        popUpTo(Route.EmployeeList.createRoute(portfolioId)) { inclusive = true }
+                    navController.navigate(Route.EmployeeList.createRoute(portfolioId, selectedSedeId)) {
+                        popUpTo(Route.EmployeeList.createRoute(portfolioId, selectedSedeId)) { inclusive = true }
                     }
                 }
                 is EmployeeEvent.ActionError -> { /* Mostrar Snackbar o Toast */ }
@@ -39,7 +41,7 @@ fun EmployeeDetailScreen(navController: NavController, portfolioId: String, empl
         }
     }
 
-    AppScaffold(title = "Ver más Empleado", navController = navController, portfolioId = portfolioId) {
+    AppScaffold(title = "Ver más Empleado", navController = navController, portfolioId = portfolioId, selectedSedeId = selectedSedeId) {
         Box(modifier = Modifier
             .fillMaxSize()
             .background(OffWhiteBackground)) {
@@ -63,7 +65,7 @@ fun EmployeeDetailScreen(navController: NavController, portfolioId: String, empl
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(employee.name, fontSize = 20.sp, color = Color.White, modifier = Modifier.weight(1f))
-                            IconButton(onClick = { navController.navigate(Route.EditEmployee.createRoute(portfolioId, employeeId)) }) {
+                            IconButton(onClick = { navController.navigate(Route.EditEmployee.createRoute(portfolioId, selectedSedeId, employeeId)) }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.White)
                             }
                         }

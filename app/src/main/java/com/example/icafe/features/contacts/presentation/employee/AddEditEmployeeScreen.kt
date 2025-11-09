@@ -24,8 +24,12 @@ import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.ui.theme.*
 
 @Composable
-fun AddEditEmployeeScreen(navController: NavController, portfolioId: String, employeeId: Long?) {
-    val viewModel: EmployeeDetailViewModel = viewModel()
+fun AddEditEmployeeScreen(navController: NavController, portfolioId: String, selectedSedeId: String, employeeId: Long?) {
+    // Asegúrate de que la clase EmployeeDetailViewModelFactory esté definida en este archivo
+    // o en un archivo importable. En el código que te he dado, está definida al final de este mismo archivo.
+    val viewModel: EmployeeDetailViewModel = viewModel(
+        factory = EmployeeDetailViewModelFactory(portfolioId, selectedSedeId, employeeId)
+    )
     val isEditMode = employeeId != null
     val title = if (isEditMode) "Editar Empleado" else "Agregar Empleado"
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -34,16 +38,16 @@ fun AddEditEmployeeScreen(navController: NavController, portfolioId: String, emp
         viewModel.events.collect { event ->
             when (event) {
                 is EmployeeEvent.ActionSuccess -> {
-                    navController.navigate(Route.EmployeeList.createRoute(portfolioId)) {
-                        popUpTo(Route.EmployeeList.createRoute(portfolioId)) { inclusive = true }
+                    navController.navigate(Route.EmployeeList.createRoute(portfolioId, selectedSedeId)) {
+                        popUpTo(Route.EmployeeList.createRoute(portfolioId, selectedSedeId)) { inclusive = true }
                     }
                 }
-                is EmployeeEvent.ActionError -> { /* Mostrar error */ }
+                is EmployeeEvent.ActionError -> { /* Show error */ }
             }
         }
     }
 
-    AppScaffold(title = title, navController = navController, portfolioId = portfolioId) {
+    AppScaffold(title = title, navController = navController, portfolioId = portfolioId, selectedSedeId = selectedSedeId) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -59,7 +63,7 @@ fun AddEditEmployeeScreen(navController: NavController, portfolioId: String, emp
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    // Título de la sección
+                    // Title Card
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -78,7 +82,7 @@ fun AddEditEmployeeScreen(navController: NavController, portfolioId: String, emp
                     }
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Campos del formulario
+                    // Form fields
                     StyledTextField(label = "Nombre", value = viewModel.name, onValueChange = { viewModel.name = it })
                     Spacer(modifier = Modifier.height(16.dp))
                     StyledTextField(label = "Rol", value = viewModel.role, onValueChange = { viewModel.role = it })
@@ -122,7 +126,9 @@ fun AddEditEmployeeScreen(navController: NavController, portfolioId: String, emp
             }
         }
     }
-}
+} // CIERRE DE AddEditEmployeeScreen
+
+// --- Las siguientes funciones y clases DEBEN estar en este archivo, o en uno importado ---
 
 @Composable
 fun StyledTextField(
@@ -192,5 +198,26 @@ fun ConfirmationDialog(
                 }
             }
         }
+    }
+}
+
+
+class EmployeeDetailViewModelFactory(
+    private val portfolioId: String,
+    private val selectedSedeId: String,
+    private val employeeId: Long?
+) : androidx.lifecycle.ViewModelProvider.Factory {
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(EmployeeDetailViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return EmployeeDetailViewModel(
+                savedStateHandle = androidx.lifecycle.SavedStateHandle().apply {
+                    set("portfolioId", portfolioId)
+                    set("selectedSedeId", selectedSedeId)
+                    set("employeeId", employeeId?.toString())
+                }
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

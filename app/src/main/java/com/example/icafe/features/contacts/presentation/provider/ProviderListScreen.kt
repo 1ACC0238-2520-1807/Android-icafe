@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.SavedStateHandle // Import for SavedStateHandle
+import androidx.lifecycle.ViewModel // Import for ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.icafe.core.Route
@@ -26,14 +28,17 @@ import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.ui.theme.*
 
 @Composable
-fun ProviderListScreen(navController: NavController, portfolioId: String) {
-    val viewModel: ProviderListViewModel = viewModel()
+fun ProviderListScreen(navController: NavController, portfolioId: String, selectedSedeId: String) {
+    val viewModel: ProviderListViewModel = viewModel(
+        factory = ProviderListViewModelFactory(portfolioId, selectedSedeId)
+    )
     val uiState by viewModel.uiState.collectAsState()
 
     AppScaffold(
         title = "Proveedores",
         navController = navController,
-        portfolioId = portfolioId
+        portfolioId = portfolioId,
+        selectedSedeId = selectedSedeId
     ) {
         Column(
             modifier = Modifier
@@ -42,7 +47,7 @@ fun ProviderListScreen(navController: NavController, portfolioId: String) {
                 .padding(16.dp)
         ) {
             Button(
-                onClick = { navController.navigate(Route.AddProvider.createRoute(portfolioId)) },
+                onClick = { navController.navigate(Route.AddProvider.createRoute(portfolioId, selectedSedeId)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -88,9 +93,9 @@ fun ProviderListScreen(navController: NavController, portfolioId: String) {
                             }
                         } else {
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(state.providers) { provider ->
+                                items(state.providers, key = { it.id }) { provider ->
                                     ProviderItem(provider = provider) {
-                                        navController.navigate(Route.ProviderDetail.createRoute(portfolioId, provider.id))
+                                        navController.navigate(Route.ProviderDetail.createRoute(portfolioId, selectedSedeId, provider.id))
                                     }
                                 }
                             }
@@ -100,7 +105,7 @@ fun ProviderListScreen(navController: NavController, portfolioId: String) {
             }
         }
     }
-}
+} // CIERRE DE ProviderListScreen
 
 @Composable
 fun ProviderItem(provider: ProviderResource, onClick: () -> Unit) {
@@ -127,5 +132,24 @@ fun ProviderItem(provider: ProviderResource, onClick: () -> Unit) {
         ) {
             Text("Ver más", color = Color.White)
         }
+    }
+}
+
+// DEFINICIÓN DE LA FACTORY AQUÍ
+class ProviderListViewModelFactory(
+    private val portfolioId: String,
+    private val selectedSedeId: String // Not used directly in this ViewModel, but needed for consistency
+) : androidx.lifecycle.ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(ProviderListViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return ProviderListViewModel(
+                savedStateHandle = SavedStateHandle().apply {
+                    set("portfolioId", portfolioId)
+                    set("selectedSedeId", selectedSedeId)
+                }
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

@@ -5,23 +5,20 @@ import okhttp3.Response
 
 class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        // Obtiene la petición original
         val originalRequest = chain.request()
 
-        // Obtiene el token
-        val token = TokenManager.getToken()
+        val token = TokenManager.getToken() // Obtiene el token
 
-        // Si no hay token (ej. en login/register), ejecuta la petición original
         if (token == null) {
+            // Si no hay token, procede con la solicitud original (para endpoints públicos como login/register)
             return chain.proceed(originalRequest)
         }
 
-        // Si hay token, crea una nueva petición con la cabecera de autorización
+        // Si hay token, lo añade al encabezado Authorization
         val newRequest = originalRequest.newBuilder()
-            .header("Authorization", "Bearer $token")
+            .header("Authorization", "Bearer $token") // Asegura el prefijo "Bearer "
             .build()
 
-        // Ejecuta la nueva petición
         return chain.proceed(newRequest)
     }
 }

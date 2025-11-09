@@ -19,7 +19,7 @@ sealed class LoginUiState {
 
 class LoginViewModel : ViewModel() {
 
-    private val authApi = RetrofitClient.authApi // Cambiado de .instance a .authApi
+    private val authApi = RetrofitClient.authApi
 
     // Campos del formulario
     var email by mutableStateOf("")
@@ -40,14 +40,12 @@ class LoginViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val request = LoginRequest(email = email, password = password)
-                // Usamos la variable 'authApi' que definimos arriba
                 val response = authApi.login(request)
 
                 if (response.isSuccessful && response.body() != null) {
                     val loginResponse = response.body()!!
                     TokenManager.saveToken(loginResponse.token)
                     println("Login exitoso! Token: ${loginResponse.token}")
-                    // El error 'unresolved reference' para userId también se soluciona aquí
                     uiState = LoginUiState.Success(loginResponse.userId)
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Credenciales incorrectas o usuario no encontrado."

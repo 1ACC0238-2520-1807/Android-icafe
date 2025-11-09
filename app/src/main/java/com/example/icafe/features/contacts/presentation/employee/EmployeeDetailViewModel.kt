@@ -27,7 +27,8 @@ class EmployeeDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
     var email by mutableStateOf("")
     var phoneNumber by mutableStateOf("")
     var salary by mutableStateOf("")
-    var branchId by mutableStateOf("1") // Placeholder, puedes cambiarlo
+    // El branchId se derivará de selectedSedeId y se usará en la solicitud.
+    // No es necesario tenerlo como un campo mutableStateOf para el formulario directamente.
 
     // --- ESTADO DE LA UI ---
     var isLoading by mutableStateOf(false)
@@ -39,6 +40,7 @@ class EmployeeDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
     val events = _events.asSharedFlow()
 
     private val portfolioId: String = savedStateHandle.get<String>("portfolioId")!!
+    private val selectedSedeId: String = savedStateHandle.get<String>("selectedSedeId")!!
     private val employeeId: String? = savedStateHandle.get<String>("employeeId")
 
     init {
@@ -51,6 +53,7 @@ class EmployeeDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
         isLoading = true
         viewModelScope.launch {
             try {
+                // El endpoint del backend es por portfolioId y employeeId
                 val response = RetrofitClient.contactsApi.getEmployeeById(portfolioId, id)
                 if (response.isSuccessful && response.body() != null) {
                     employee = response.body()
@@ -60,7 +63,8 @@ class EmployeeDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                     email = employee?.email ?: ""
                     phoneNumber = employee?.phoneNumber ?: ""
                     salary = employee?.salary ?: ""
-                    branchId = employee?.branchId?.toString() ?: "1"
+                    // No actualizamos el branchId desde el empleado aquí, ya que se pasa implícitamente
+                    // a través de selectedSedeId para las acciones.
                 } else {
                     _events.emit(EmployeeEvent.ActionError("No se pudo cargar el empleado."))
                 }
@@ -82,7 +86,7 @@ class EmployeeDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                     email = email,
                     phoneNumber = phoneNumber,
                     salary = salary,
-                    branchId = branchId.toLongOrNull() ?: 1L
+                    branchId = selectedSedeId.toLongOrNull() ?: 1L // Usar selectedSedeId como branchId
                 )
 
                 val response = if (employeeId == null) {
@@ -94,10 +98,11 @@ class EmployeeDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                 if (response.isSuccessful) {
                     _events.emit(EmployeeEvent.ActionSuccess)
                 } else {
-                    _events.emit(EmployeeEvent.ActionError("Error al guardar."))
+                    val errorBody = response.errorBody()?.string() ?: "Error al guardar."
+                    _events.emit(EmployeeEvent.ActionError("Error del servidor: $errorBody"))
                 }
             } catch (e: Exception) {
-                _events.emit(EmployeeEvent.ActionError("Error de conexión."))
+                _events.emit(EmployeeEvent.ActionError("Error de conexión: ${e.message}"))
             } finally {
                 isLoading = false
             }
@@ -113,10 +118,11 @@ class EmployeeDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                     if (response.isSuccessful) {
                         _events.emit(EmployeeEvent.ActionSuccess)
                     } else {
-                        _events.emit(EmployeeEvent.ActionError("Error al eliminar."))
+                        val errorBody = response.errorBody()?.string() ?: "Error al eliminar."
+                        _events.emit(EmployeeEvent.ActionError("Error del servidor: $errorBody"))
                     }
                 } catch (e: Exception) {
-                    _events.emit(EmployeeEvent.ActionError("Error de conexión."))
+                    _events.emit(EmployeeEvent.ActionError("Error de conexión: ${e.message}"))
                 } finally {
                     isLoading = false
                 }
