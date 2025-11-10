@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,27 +22,48 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.icafe.core.Route
 import com.example.icafe.features.home.presentation.scaffold.AppScaffold
-import com.example.icafe.features.inventory.data.network.SupplyItemResource // Usar SupplyItemResource
+import com.example.icafe.features.inventory.data.network.SupplyItemResource
 import com.example.icafe.ui.theme.LightGrayBackground
 import com.example.icafe.ui.theme.OffWhiteBackground
 
+import androidx.lifecycle.Lifecycle // MODIFIED: Import is now correct
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner // MODIFIED: Import for LifecycleOwner
+import androidx.compose.ui.platform.LocalLifecycleOwner
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemListScreen(navController: NavController, portfolioId: String, selectedSedeId: String) { // MODIFIED: Add portfolioId
+fun ItemListScreen(navController: NavController, portfolioId: String, selectedSedeId: String) {
+    // MODIFIED: Calling the companion object Factory
     val viewModel: ItemListViewModel = viewModel(
-        factory = ItemListViewModelFactory(portfolioId, selectedSedeId) // MODIFIED: Pass portfolioId
+        factory = ItemListViewModel.ItemListViewModelFactory(portfolioId, selectedSedeId)
     )
     val uiState by viewModel.uiState.collectAsState()
+
+    // NEW: Observe lifecycle events to reload data when the screen is resumed
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        // MODIFIED: Corrected observer implementation
+        lifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
+            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    viewModel.loadItems() // Reload items when the screen is resumed
+                }
+            }
+        })
+    }
+
 
     AppScaffold(
         title = "Insumos",
         navController = navController,
-        portfolioId = portfolioId, // MODIFIED: Pass portfolioId to AppScaffold
+        portfolioId = portfolioId,
         selectedSedeId = selectedSedeId
     ) {
         Scaffold(
             floatingActionButton = {
-                FloatingActionButton(onClick = { navController.navigate(Route.AddItem.createRoute(portfolioId, selectedSedeId)) }) { // MODIFIED: Pass portfolioId
+                FloatingActionButton(onClick = { navController.navigate(Route.AddItem.createRoute(portfolioId, selectedSedeId)) }) {
                     Icon(Icons.Default.Add, contentDescription = "Agregar Insumo")
                 }
             }
@@ -69,7 +91,7 @@ fun ItemListScreen(navController: NavController, portfolioId: String, selectedSe
                                 }
                                 items(state.items, key = { it.id }) { item ->
                                     ItemRow(item = item) {
-                                        navController.navigate(Route.ItemDetail.createRoute(portfolioId, selectedSedeId, item.id)) // MODIFIED: Pass portfolioId
+                                        navController.navigate(Route.ItemDetail.createRoute(portfolioId, selectedSedeId, item.id))
                                     }
                                 }
                             }
@@ -83,7 +105,7 @@ fun ItemListScreen(navController: NavController, portfolioId: String, selectedSe
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemRow(item: SupplyItemResource, onClick: () -> Unit) { // Usar SupplyItemResource
+fun ItemRow(item: SupplyItemResource, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -95,12 +117,12 @@ fun ItemRow(item: SupplyItemResource, onClick: () -> Unit) { // Usar SupplyItemR
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(item.name, Modifier.weight(2f), style = MaterialTheme.typography.bodyLarge) // Usar item.name
+            Text(item.name, Modifier.weight(2f), style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = "${item.stock} ${item.unit.lowercase()}", // Usar item.stock y item.unit
+                text = "${item.stock} ${item.unit.lowercase()}",
                 Modifier.weight(1f),
                 textAlign = TextAlign.End,
-                color = MaterialTheme.colorScheme.onSurface // Color predeterminado por ahora
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

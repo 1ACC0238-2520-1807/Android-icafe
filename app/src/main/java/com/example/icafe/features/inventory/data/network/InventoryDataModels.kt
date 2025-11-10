@@ -1,6 +1,7 @@
 package com.example.icafe.features.inventory.data.network
 import com.google.gson.annotations.SerializedName
-import java.time.LocalDateTime
+// Ya no necesitamos importar java.time.LocalDateTime aquí
+
 // Enum para la unidad de medida, debe coincidir con el backend
 enum class UnitMeasureType {
     GRAMOS,
@@ -23,8 +24,8 @@ data class SupplyItemResource(
     val unit: String,
     val unitPrice: Double,
     val stock: Double,
-    val buyDate: LocalDateTime,
-    val expiredDate: String? // MODIFIED: Changed from LocalDateTime? to String?
+    val buyDate: String, // CAMBIO: De LocalDateTime a String
+    val expiredDate: String?
 )
 // Modelo de solicitud para crear un insumo (SupplyItem)
 data class CreateSupplyItemRequest(
@@ -34,14 +35,14 @@ data class CreateSupplyItemRequest(
     val unit: String,
     val unitPrice: Double,
     val stock: Double,
-    val expiredDate: String? // MODIFIED: Changed from LocalDateTime? to String?
+    val expiredDate: String?
 )
 // Modelo de solicitud para actualizar un insumo (SupplyItem)
 data class UpdateSupplyItemRequest(
     val name: String,
     val unitPrice: Double,
     val stock: Double,
-    val expiredDate: String? // MODIFIED: Changed from LocalDateTime? to String?
+    val expiredDate: String?
 )
 // Modelo recibido del backend para una Transacción de Inventario (StockMovement)
 data class InventoryTransactionResource(
@@ -51,7 +52,7 @@ data class InventoryTransactionResource(
     val type: TransactionType,
     val quantity: Double,
     val origin: String,
-    val movementDate: LocalDateTime
+    val movementDate: String // CAMBIO: De LocalDateTime a String
 )
 // Modelo para CREAR una Transacción de Inventario
 data class CreateInventoryTransactionResource(

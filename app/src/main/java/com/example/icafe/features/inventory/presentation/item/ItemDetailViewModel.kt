@@ -8,19 +8,23 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.icafe.core.data.network.RetrofitClient
+import com.example.icafe.features.contacts.data.network.ProviderResource
 import com.example.icafe.features.inventory.data.network.CreateSupplyItemRequest
-import com.example.icafe.features.inventory.data.network.SupplyItemResource // Ahora se llama InventoryDataModels.SupplyItemResource
-import com.example.icafe.features.inventory.data.network.UnitMeasureType // Ahora se llama InventoryDataModels.UnitMeasureType
-import com.example.icafe.features.inventory.data.network.UpdateSupplyItemRequest // Ahora se llama InventoryDataModels.UpdateSupplyItemRequest
+import com.example.icafe.features.inventory.data.network.SupplyItemResource
+import com.example.icafe.features.inventory.data.network.UnitMeasureType
+import com.example.icafe.features.inventory.data.network.UpdateSupplyItemRequest
+// NUEVAS IMPORTACIONES:
+import com.example.icafe.features.inventory.data.network.CreateInventoryTransactionResource // Importar el DTO correcto
+import com.example.icafe.features.inventory.data.network.TransactionType // Importar el Enum correcto
+
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import java.time.LocalDate // NEW import
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter // NEW import
-import java.time.format.DateTimeParseException // NEW import
-import com.example.icafe.features.contacts.data.network.ProviderResource
+import java.time.LocalDate
+import java.time.LocalDateTime // Necesario para el movimiento
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 sealed class ItemEvent {
     object ActionSuccess : ItemEvent()
@@ -33,7 +37,7 @@ class ItemDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
     var unit by mutableStateOf(UnitMeasureType.UNIDADES)
     var unitPrice by mutableStateOf("")
     var stock by mutableStateOf("")
-    var dateInputText by mutableStateOf("") // NEW: For raw date input from TextField
+    var dateInputText by mutableStateOf("")
 
     var availableProviders by mutableStateOf<List<ProviderResource>>(emptyList())
     var selectedProvider by mutableStateOf<ProviderResource?>(null)
@@ -52,6 +56,7 @@ class ItemDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
     private val itemId: String? = savedStateHandle.get<String>("itemId")
 
     init {
+        Log.d("ItemDetailViewModel", "Inicializando ItemDetailViewModel. selectedSedeId recibido: $selectedSedeId, branchId (calculado para creación): $branchId")
         loadProviders()
         itemId?.let {
             loadItem(it.toLong())
@@ -64,17 +69,22 @@ class ItemDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
                 val response = RetrofitClient.contactsApi.getProviders(portfolioId)
                 if (response.isSuccessful && response.body() != null) {
                     availableProviders = response.body()!!
+                    // Si estamos editando y ya tenemos el supplyItem, seleccionamos el proveedor correspondiente
                     if (itemId != null && supplyItem != null) {
                         selectedProvider = availableProviders.find { it.id == supplyItem?.providerId }
                     }
+                    Log.d("ItemDetailViewModel", "Proveedores cargados: ${availableProviders.size} disponibles.")
                 } else {
-                    Log.e("ItemDetailViewModel", "Error loading providers: ${response.code()} - ${response.errorBody()?.string()}")
+                    Log.e("ItemDetailViewModel", "Error cargando proveedores: ${response.code()} - ${response.errorBody()?.string()}")
+                    _events.emit(ItemEvent.ActionError("Error cargando proveedores."))
                 }
             } catch (e: Exception) {
-                Log.e("ItemDetailViewModel", "Network error loading providers: ${e.message}")
+                Log.e("ItemDetailViewModel", "Error de red al cargar proveedores: ${e.message}")
+                _events.emit(ItemEvent.ActionError("Error de conexión al cargar proveedores."))
             }
         }
     }
+
 
     private fun loadItem(id: Long) {
         isLoading = true
@@ -88,15 +98,19 @@ class ItemDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
                     unitPrice = supplyItem?.unitPrice?.toString() ?: ""
                     stock = supplyItem?.stock?.toString() ?: ""
 
-                    // NEW: Update dateInputText from loaded expiredDate (which is now String?)
                     dateInputText = supplyItem?.expiredDate ?: ""
 
+                    // Asegurarse de que el proveedor se selecciona después de cargar los disponibles
                     selectedProvider = availableProviders.find { it.id == supplyItem?.providerId }
+                    Log.d("ItemDetailViewModel", "Item ${id} cargado: Nombre='${name}', BranchID_Cargado=${supplyItem?.branchId}, ExpiredDate='${dateInputText}'")
                 } else {
-                    _events.emit(ItemEvent.ActionError("No se pudo cargar el insumo."))
+                    val errorBody = response.errorBody()?.string() ?: "Error desconocido"
+                    Log.e("ItemDetailViewModel", "Error al cargar insumo ${id}: ${response.code()} - $errorBody")
+                    _events.emit(ItemEvent.ActionError("No se pudo cargar el insumo: $errorBody"))
                 }
             } catch (e: Exception) {
-                _events.emit(ItemEvent.ActionError("Error de conexión."))
+                Log.e("ItemDetailViewModel", "Error de red al cargar insumo ${id}: ${e.message}", e)
+                _events.emit(ItemEvent.ActionError("Error de conexión al cargar insumo."))
             } finally {
                 isLoading = false
             }
@@ -125,10 +139,8 @@ class ItemDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
             return
         }
 
-        // NEW: Date validation is still here, but we now send `dateInputText` (String?) directly
         val expiredDateStringToSend: String? = if (dateInputText.isNotBlank()) {
             try {
-                // Validate format without converting to LocalDateTime/LocalDate
                 LocalDate.parse(dateInputText, DateTimeFormatter.ISO_LOCAL_DATE)
                 dateInputText
             } catch (e: DateTimeParseException) {
@@ -142,47 +154,76 @@ class ItemDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
         isLoading = true
         viewModelScope.launch {
             try {
-                if (itemId == null) {
-                    val request = CreateSupplyItemRequest(
+                if (itemId == null) { // Lógica para CREAR un nuevo insumo
+                    val createRequest = CreateSupplyItemRequest(
                         providerId = selectedProviderIdValue,
                         branchId = branchId,
                         name = name,
                         unit = unit.name,
                         unitPrice = unitPriceValue,
                         stock = stockValue,
-                        expiredDate = expiredDateStringToSend // NEW: Send String? directly
+                        expiredDate = expiredDateStringToSend
                     )
 
-                    Log.d("ItemViewModel", "Enviando para crear SupplyItem: ${Gson().toJson(request)}")
+                    Log.d("ItemDetailViewModel", "Enviando para crear SupplyItem: ${Gson().toJson(createRequest)}")
+                    Log.d("ItemDetailViewModel", "  --> branchId ENVIADO en la petición de creación: ${createRequest.branchId}")
 
-                    val response = RetrofitClient.productApi.createSupplyItem(request)
+                    val createResponse = RetrofitClient.productApi.createSupplyItem(createRequest)
 
-                    if (response.isSuccessful) {
-                        Log.d("ItemViewModel", "Creación exitosa: ${response.body()}")
-                        _events.emit(ItemEvent.ActionSuccess)
+                    if (createResponse.isSuccessful && createResponse.body() != null) {
+                        val newSupplyItem = createResponse.body()!!
+                        Log.d("ItemDetailViewModel", "Creación de SupplyItem exitosa: ID ${newSupplyItem.id}")
+
+                        // --- NUEVO: Registrar movimiento de inventario ---
+                        // El DTO CreateInventoryTransactionResource no requiere 'movementDate' en el frontend
+                        val movementRequest = CreateInventoryTransactionResource(
+                            type = TransactionType.ENTRADA, // Usar el Enum correcto
+                            quantity = stockValue,
+                            origin = "Initial Stock", // O "Purchase Initial"
+                            supplyItemId = newSupplyItem.id, // Usar el ID del insumo recién creado
+                            branchId = branchId
+                        )
+                        Log.d("ItemDetailViewModel", "Enviando para crear InventoryMovement: ${Gson().toJson(movementRequest)}")
+
+                        // *** CAMBIO AQUÍ: Usar RetrofitClient.inventoryApi.registerMovement ***
+                        val movementResponse = RetrofitClient.inventoryApi.registerMovement(movementRequest)
+
+                        if (movementResponse.isSuccessful) {
+                            Log.d("ItemDetailViewModel", "Movimiento de inventario registrado exitosamente para SupplyItem ID: ${newSupplyItem.id}")
+                            _events.emit(ItemEvent.ActionSuccess)
+                        } else {
+                            val errorBodyMovement = movementResponse.errorBody()?.string() ?: "Error desconocido"
+                            Log.e("ItemDetailViewModel", "Error al crear movimiento de inventario: ${movementResponse.code()} - $errorBodyMovement")
+                            _events.emit(ItemEvent.ActionError("Insumo creado, pero hubo un error al registrar el movimiento de inventario: $errorBodyMovement"))
+                        }
+                        // --- FIN NUEVO ---
+
                     } else {
-                        val errorBody = response.errorBody()?.string() ?: "Error desconocido"
-                        Log.e("ItemViewModel", "Error al crear: ${response.code()} - $errorBody")
-                        _events.emit(ItemEvent.ActionError("Error del servidor: $errorBody"))
+                        val errorBodyCreate = createResponse.errorBody()?.string() ?: "Error desconocido"
+                        Log.e("ItemDetailViewModel", "Error al crear SupplyItem: ${createResponse.code()} - $errorBodyCreate")
+                        _events.emit(ItemEvent.ActionError("Error del servidor al crear insumo: $errorBodyCreate"))
                     }
-                } else {
-                    val request = UpdateSupplyItemRequest(
+                } else { // Lógica para ACTUALIZAR un insumo existente
+                    val updateRequest = UpdateSupplyItemRequest(
                         name = name,
                         unitPrice = unitPriceValue,
                         stock = stockValue,
-                        expiredDate = expiredDateStringToSend // NEW: Send String? directly
+                        expiredDate = expiredDateStringToSend
                     )
-                    Log.d("ItemViewModel", "Enviando para actualizar SupplyItem (ID: $itemId): ${Gson().toJson(request)}")
-                    val response = RetrofitClient.productApi.updateSupplyItem(itemId.toLong(), request)
-                    if (response.isSuccessful) {
+                    Log.d("ItemDetailViewModel", "Enviando para actualizar SupplyItem (ID: $itemId): ${Gson().toJson(updateRequest)}")
+                    val updateResponse = RetrofitClient.productApi.updateSupplyItem(itemId.toLong(), updateRequest)
+                    if (updateResponse.isSuccessful) {
+                        Log.d("ItemDetailViewModel", "Actualización exitosa del Item ${itemId}.")
+                        // Aquí también podrías añadir lógica para un movimiento de ajuste si el stock ha cambiado
                         _events.emit(ItemEvent.ActionSuccess)
                     } else {
-                        val errorBody = response.errorBody()?.string() ?: "Error desconocido"
-                        _events.emit(ItemEvent.ActionError("Error del servidor: $errorBody"))
+                        val errorBodyUpdate = updateResponse.errorBody()?.string() ?: "Error desconocido"
+                        Log.e("ItemDetailViewModel", "Error al actualizar insumo: ${updateResponse.code()} - $errorBodyUpdate")
+                        _events.emit(ItemEvent.ActionError("Error del servidor al actualizar insumo: $errorBodyUpdate"))
                     }
                 }
             } catch (e: Exception) {
-                Log.e("ItemViewModel", "Excepción de red: ${e.message}", e)
+                Log.e("ItemDetailViewModel", "Excepción de red al guardar insumo: ${e.message}", e)
                 _events.emit(ItemEvent.ActionError("Error de conexión. Revisa el Logcat."))
             } finally {
                 isLoading = false
@@ -197,13 +238,17 @@ class ItemDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
                 try {
                     val response = RetrofitClient.productApi.deleteSupplyItem(id.toLong())
                     if (response.isSuccessful) {
+                        Log.d("ItemDetailViewModel", "Eliminación exitosa del Item ${id}.")
+                        // Aquí también se podría registrar un movimiento de "Salida" o "Ajuste Negativo"
                         _events.emit(ItemEvent.ActionSuccess)
                     } else {
                         val errorBody = response.errorBody()?.string() ?: "Error al eliminar."
+                        Log.e("ItemDetailViewModel", "Error al eliminar insumo: ${response.code()} - $errorBody")
                         _events.emit(ItemEvent.ActionError("Error del servidor: $errorBody"))
                     }
                 } catch (e: Exception) {
-                    _events.emit(ItemEvent.ActionError("Error de conexión."))
+                    Log.e("ItemDetailViewModel", "Excepción de red al eliminar insumo: ${e.message}", e)
+                    _events.emit(ItemEvent.ActionError("Error de conexión al eliminar insumo."))
                 } finally {
                     isLoading = false
                 }
