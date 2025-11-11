@@ -1,5 +1,12 @@
 package com.example.icafe.core
 
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import com.example.icafe.core.AppNav
+import com.example.icafe.ui.theme.ICafeTheme
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +22,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import android.util.Log // IMPORTANTE: Añadir esta importación
+
 // New import
 import com.example.icafe.features.contacts.presentation.ContactsLandingScreen
 import com.example.icafe.features.auth.presentation.login.Login
@@ -35,7 +44,7 @@ import com.example.icafe.features.inventory.presentation.InventoryLandingScreen
 import com.example.icafe.features.inventory.presentation.InventoryMovementsScreen
 
 // Imports for Products
-import com.example.icafe.features.products.presentation.AddEditProductScreen // Importación CORRECTA
+import com.example.icafe.features.products.presentation.AddEditProductScreen
 import com.example.icafe.features.products.presentation.ProductListScreen
 
 
@@ -46,6 +55,18 @@ import com.example.icafe.features.sede.presentation.selection.SedeSelectionScree
 // Imports for Dashboard
 import com.example.icafe.features.dashboard.presentation.DashboardScreen
 
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            ICafeTheme {
+                AppNav()
+            }
+        }
+    }
+}
+
 @Composable
 fun AppNav() {
     val navController = rememberNavController()
@@ -55,6 +76,7 @@ fun AppNav() {
         composable(Route.Login.route) {
             Login(
                 onSubmit = { userId ->
+                    Log.d("AppNav", "Login exitoso, navegando a SedeSelection con portfolioId: $userId")
                     navController.navigate(Route.SedeSelection.createRoute(portfolioId = userId.toString())) {
                         popUpTo(Route.Login.route) { inclusive = true }
                     }
@@ -85,6 +107,7 @@ fun AppNav() {
             arguments = listOf(navArgument("portfolioId") { type = NavType.StringType })
         ) { backStackEntry ->
             val portfolioId = backStackEntry.arguments?.getString("portfolioId") ?: "0"
+            Log.d("AppNav", "En SedeSelectionScreen: Extrayendo portfolioId='$portfolioId'")
             SedeSelectionScreen(navController = navController, portfolioId = portfolioId)
         }
         composable(
@@ -92,6 +115,7 @@ fun AppNav() {
             arguments = listOf(navArgument("sedeId") { type = NavType.StringType })
         ) { backStackEntry ->
             val sedeId = backStackEntry.arguments?.getString("sedeId")
+            Log.d("AppNav", "En AddEditSedeScreen: Extrayendo sedeId='$sedeId'")
             AddEditSedeScreen(navController = navController, sedeId = sedeId)
         }
 
@@ -103,12 +127,13 @@ fun AppNav() {
                 navArgument("selectedSedeId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId") ?: "0"
-            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId") ?: "0"
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
+            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En DashboardScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
             DashboardScreen(navController = navController, portfolioId = portfolioId, selectedSedeId = selectedSedeId)
         }
 
-        // --- Contacts Landing Screen (NEW COMPOSABLE) ---
+        // --- Contacts Landing Screen ---
         composable(
             route = Route.ContactsLanding.route,
             arguments = listOf(
@@ -118,6 +143,7 @@ fun AppNav() {
         ) { backStackEntry ->
             val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En ContactsLandingScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
             ContactsLandingScreen(navController, portfolioId, selectedSedeId)
         }
 
@@ -131,6 +157,7 @@ fun AppNav() {
         ) { backStackEntry ->
             val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En EmployeeListScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
             EmployeeListScreen(navController, portfolioId, selectedSedeId)
         }
         composable(
@@ -142,6 +169,7 @@ fun AppNav() {
         ) { backStackEntry ->
             val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En AddEmployeeScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
             AddEditEmployeeScreen(navController, portfolioId, selectedSedeId, employeeId = null)
         }
         composable(
@@ -155,6 +183,7 @@ fun AppNav() {
             val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
             val employeeId = backStackEntry.arguments?.getString("employeeId")!!.toLong()
+            Log.d("AppNav", "En EmployeeDetailScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId', employeeId=$employeeId")
             EmployeeDetailScreen(navController, portfolioId, selectedSedeId, employeeId)
         }
         composable(
@@ -168,6 +197,7 @@ fun AppNav() {
             val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
             val employeeId = backStackEntry.arguments?.getString("employeeId")!!.toLong()
+            Log.d("AppNav", "En EditEmployeeScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId', employeeId=$employeeId")
             AddEditEmployeeScreen(navController, portfolioId, selectedSedeId, employeeId)
         }
 
@@ -180,6 +210,7 @@ fun AppNav() {
         ) { backStackEntry ->
             val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En ProviderListScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
             ProviderListScreen(navController, portfolioId, selectedSedeId)
         }
         composable(
@@ -191,6 +222,7 @@ fun AppNav() {
         ) { backStackEntry ->
             val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En AddProviderScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
             AddEditProviderScreen(navController, portfolioId, selectedSedeId, providerId = null)
         }
         composable(
@@ -204,6 +236,7 @@ fun AppNav() {
             val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
             val providerId = backStackEntry.arguments?.getString("providerId")!!.toLong()
+            Log.d("AppNav", "En ProviderDetailScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId', providerId=$providerId")
             ProviderDetailScreen(navController, portfolioId, selectedSedeId, providerId)
         }
         composable(
@@ -217,6 +250,7 @@ fun AppNav() {
             val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
             val providerId = backStackEntry.arguments?.getString("providerId")!!.toLong()
+            Log.d("AppNav", "En EditProviderScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId', providerId=$providerId")
             AddEditProviderScreen(navController, portfolioId, selectedSedeId, providerId)
         }
 
@@ -228,67 +262,73 @@ fun AppNav() {
                 navArgument("selectedSedeId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId") ?: "0"
-            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId") ?: "0"
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
+            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En InventoryLandingScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
             InventoryLandingScreen(navController, portfolioId, selectedSedeId)
         }
         composable(
             route = Route.ItemList.route,
             arguments = listOf(
-                navArgument("portfolioId") { type = NavType.StringType }, // ADDED
+                navArgument("portfolioId") { type = NavType.StringType },
                 navArgument("selectedSedeId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!! // ADDED
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
-            ItemListScreen(navController, portfolioId, selectedSedeId) // ADDED portfolioId
+            Log.d("AppNav", "En ItemListScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
+            ItemListScreen(navController, portfolioId, selectedSedeId)
         }
         composable(
             route = Route.AddItem.route,
             arguments = listOf(
-                navArgument("portfolioId") { type = NavType.StringType }, // ADDED
+                navArgument("portfolioId") { type = NavType.StringType },
                 navArgument("selectedSedeId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!! // ADDED
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
-            AddEditItemScreen(navController, portfolioId, selectedSedeId, itemId = null) // ADDED portfolioId
+            Log.d("AppNav", "En AddItemScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
+            AddEditItemScreen(navController, portfolioId, selectedSedeId, itemId = null)
         }
         composable(
             route = Route.ItemDetail.route,
             arguments = listOf(
-                navArgument("portfolioId") { type = NavType.StringType }, // ADDED
+                navArgument("portfolioId") { type = NavType.StringType },
                 navArgument("selectedSedeId") { type = NavType.StringType },
                 navArgument("itemId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!! // ADDED
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
             val itemId = backStackEntry.arguments?.getString("itemId")!!.toLong()
-            AddEditItemScreen(navController, portfolioId, selectedSedeId, itemId = itemId) // ADDED portfolioId
+            Log.d("AppNav", "En ItemDetailScreen (Edit): Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId', itemId=$itemId")
+            AddEditItemScreen(navController, portfolioId, selectedSedeId, itemId = itemId)
         }
         composable(
             route = Route.EditItem.route,
             arguments = listOf(
-                navArgument("portfolioId") { type = NavType.StringType }, // ADDED
+                navArgument("portfolioId") { type = NavType.StringType },
                 navArgument("selectedSedeId") { type = NavType.StringType },
                 navArgument("itemId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!! // ADDED
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
             val itemId = backStackEntry.arguments?.getString("itemId")!!.toLong()
-            AddEditItemScreen(navController, portfolioId, selectedSedeId, itemId = itemId) // ADDED portfolioId
+            Log.d("AppNav", "En EditItemScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId', itemId=$itemId")
+            AddEditItemScreen(navController, portfolioId, selectedSedeId, itemId = itemId)
         }
         composable(
             route = Route.InventoryMovements.route,
             arguments = listOf(
-                navArgument("portfolioId") { type = NavType.StringType }, // ADDED here too for consistency
+                navArgument("portfolioId") { type = NavType.StringType },
                 navArgument("selectedSedeId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId") ?: "0" // ADDED
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En InventoryMovementsScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
             InventoryMovementsScreen(navController, portfolioId = portfolioId, selectedSedeId = selectedSedeId)
         }
 
@@ -296,50 +336,54 @@ fun AppNav() {
         composable(
             route = Route.ProductList.route,
             arguments = listOf(
-                navArgument("portfolioId") { type = NavType.StringType }, // ADDED here for consistency
+                navArgument("portfolioId") { type = NavType.StringType },
                 navArgument("selectedSedeId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId") ?: "0" // ADDED
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
-            ProductListScreen(navController, portfolioId, selectedSedeId) // ADDED portfolioId
+            Log.d("AppNav", "En ProductListScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
+            ProductListScreen(navController, portfolioId, selectedSedeId)
         }
         composable(
             route = Route.AddProduct.route,
             arguments = listOf(
-                navArgument("portfolioId") { type = NavType.StringType }, // ADDED here for consistency
+                navArgument("portfolioId") { type = NavType.StringType },
                 navArgument("selectedSedeId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId") ?: "0" // ADDED
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
-            AddEditProductScreen(navController, portfolioId, selectedSedeId, productId = null) // ADDED portfolioId
+            Log.d("AppNav", "En AddProductScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
+            AddEditProductScreen(navController, portfolioId, selectedSedeId, productId = null)
         }
         composable(
             route = Route.ProductDetail.route,
             arguments = listOf(
-                navArgument("portfolioId") { type = NavType.StringType }, // ADDED here for consistency
+                navArgument("portfolioId") { type = NavType.StringType },
                 navArgument("selectedSedeId") { type = NavType.StringType },
                 navArgument("productId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId") ?: "0" // ADDED
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
             val productId = backStackEntry.arguments?.getString("productId")!!.toLong()
-            AddEditProductScreen(navController, portfolioId, selectedSedeId, productId = productId) // ADDED portfolioId
+            Log.d("AppNav", "En ProductDetailScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId', productId=$productId")
+            AddEditProductScreen(navController, portfolioId, selectedSedeId, productId = productId)
         }
         composable(
             route = Route.EditProduct.route,
             arguments = listOf(
-                navArgument("portfolioId") { type = NavType.StringType }, // ADDED here for consistency
+                navArgument("portfolioId") { type = NavType.StringType },
                 navArgument("selectedSedeId") { type = NavType.StringType },
                 navArgument("productId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId") ?: "0" // ADDED
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
             val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
             val productId = backStackEntry.arguments?.getString("productId")!!.toLong()
-            AddEditProductScreen(navController, portfolioId, selectedSedeId, productId = productId) // ADDED portfolioId
+            Log.d("AppNav", "En EditProductScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId', productId=$productId")
+            AddEditProductScreen(navController, portfolioId, selectedSedeId, productId = productId)
         }
 
         // --- Placeholder for Sales and Purchases ---
@@ -350,8 +394,9 @@ fun AppNav() {
                 navArgument("selectedSedeId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId") ?: "0"
-            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId") ?: "0"
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
+            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En PurchasesScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
             com.example.icafe.features.home.presentation.scaffold.AppScaffold(
                 title = "Compras", navController = navController, portfolioId = portfolioId, selectedSedeId = selectedSedeId
             ) {
@@ -374,8 +419,9 @@ fun AppNav() {
                 navArgument("selectedSedeId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val portfolioId = backStackEntry.arguments?.getString("portfolioId") ?: "0"
-            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId") ?: "0"
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
+            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En SalesScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
             com.example.icafe.features.home.presentation.scaffold.AppScaffold(
                 title = "Ventas", navController = navController, portfolioId = portfolioId, selectedSedeId = selectedSedeId
             ) {

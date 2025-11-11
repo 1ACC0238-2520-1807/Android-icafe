@@ -43,11 +43,9 @@ interface ProductApiService {
         @Path("supplyItemId") supplyItemId: Long
     ): Response<Unit>
 
-    // MODIFIED: Changed @PostMapping to @POST for Retrofit
     @POST("/api/v1/products/{productId}/archive")
     suspend fun archiveProduct(@Path("productId") productId: Long): Response<ProductResource>
 
-    // MODIFIED: Changed @PostMapping to @POST for Retrofit
     @POST("/api/v1/products/{productId}/activate")
     suspend fun activateProduct(@Path("productId") productId: Long): Response<ProductResource>
 
@@ -58,6 +56,10 @@ interface ProductApiService {
     @GET("/api/v1/supply-items")
     suspend fun getAllSupplyItems(): Response<List<SupplyItemResource>>
 
+    @GET("/api/v1/supply-items/{branchId}/branch")
+    suspend fun getSupplyItemsByBranch(@Path("branchId") branchId: Long): Response<List<SupplyItemResource>>
+
+    // *** RESTAURADO: Espera SupplyItemResource de nuevo ***
     @POST("/api/v1/supply-items")
     suspend fun createSupplyItem(@Body request: CreateSupplyItemRequest): Response<SupplyItemResource>
 

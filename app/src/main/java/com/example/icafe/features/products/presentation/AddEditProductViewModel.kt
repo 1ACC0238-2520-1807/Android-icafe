@@ -21,6 +21,7 @@ import java.lang.Exception
 sealed class AddEditProductUiState {
     object Loading : AddEditProductUiState()
     object LoadingSupplyItems : AddEditProductUiState()
+    object ReadyForInput : AddEditProductUiState() // *** NUEVO ESTADO ***
     data class Success(val message: String) : AddEditProductUiState()
     data class Error(val message: String) : AddEditProductUiState()
     data class Editing(val product: ProductResource) : AddEditProductUiState()
@@ -189,7 +190,7 @@ class AddEditProductViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                     if (productId != null) {
                         loadProductForEdit(productId!!)
                     } else {
-                        _uiState.value = AddEditProductUiState.Success("")
+                        _uiState.value = AddEditProductUiState.ReadyForInput // *** CAMBIO CLAVE AQUÍ ***
                     }
                 } else {
                     _uiState.value = AddEditProductUiState.Error("Error al cargar los insumos disponibles")
@@ -230,7 +231,7 @@ class AddEditProductViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                         selectedIngredients = ingredients
                     )
 
-                    _uiState.value = AddEditProductUiState.Editing(product)
+                    _uiState.value = AddEditProductUiState.Editing(product) // Este es el estado para edición
                 } else {
                     _uiState.value = AddEditProductUiState.Error("Error al cargar el producto para edición.")
                 }
@@ -249,7 +250,6 @@ class AddEditProductViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                 formData.selectedIngredients.isNotEmpty()
     }
 
-    // DEFINITION OF THE FACTORY - INTEGRATED
     companion object {
         fun Factory(portfolioId: String, selectedSedeId: String, productId: Long?): androidx.lifecycle.ViewModelProvider.Factory =
             object : androidx.lifecycle.ViewModelProvider.Factory {

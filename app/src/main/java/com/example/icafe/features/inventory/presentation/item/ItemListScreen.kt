@@ -21,30 +21,39 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.icafe.core.Route
-import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.features.inventory.data.network.SupplyItemResource
+import com.example.icafe.features.inventory.data.network.SupplyItemWithCurrentStock
 import com.example.icafe.ui.theme.LightGrayBackground
 import com.example.icafe.ui.theme.OffWhiteBackground
 
-import androidx.lifecycle.Lifecycle // MODIFIED: Import is now correct
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner // MODIFIED: Import for LifecycleOwner
+import androidx.lifecycle.LifecycleOwner
 import androidx.compose.ui.platform.LocalLifecycleOwner
 
+import com.example.icafe.features.home.presentation.scaffold.AppScaffold
+
+// *** ELIMINAR ESTAS DEFINICIONES DE ESTE ARCHIVO:
+// sealed class ItemListUiState {
+//     object Loading : ItemListUiState()
+//     data class Success(val items: List<SupplyItemWithCurrentStock>) : ItemListUiState()
+//     data class Error(val message: String) : ItemListUiState()
+// }
+//
+// class ItemListViewModel(savedStateHandle: SavedStateHandle) : ViewModel() { ... }
+// ***
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemListScreen(navController: NavController, portfolioId: String, selectedSedeId: String) {
-    // MODIFIED: Calling the companion object Factory
+    // Aquí, simplemente usa el ViewModel, ya está importado
     val viewModel: ItemListViewModel = viewModel(
         factory = ItemListViewModel.ItemListViewModelFactory(portfolioId, selectedSedeId)
     )
     val uiState by viewModel.uiState.collectAsState()
 
-    // NEW: Observe lifecycle events to reload data when the screen is resumed
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
-        // MODIFIED: Corrected observer implementation
         lifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
             override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
                 if (event == Lifecycle.Event.ON_RESUME) {
@@ -105,7 +114,7 @@ fun ItemListScreen(navController: NavController, portfolioId: String, selectedSe
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemRow(item: SupplyItemResource, onClick: () -> Unit) {
+fun ItemRow(item: SupplyItemWithCurrentStock, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),

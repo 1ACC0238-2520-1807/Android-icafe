@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.icafe.features.contacts.presentation.employee.StyledTextField
-import com.example.icafe.features.home.presentation.scaffold.AppScaffold
+import com.example.icafe.features.home.presentation.scaffold.AppScaffold // Importación necesaria
 import com.example.icafe.features.inventory.data.network.SupplyItemResource
 import com.example.icafe.ui.theme.OffWhiteBackground
 
@@ -33,7 +33,7 @@ import com.example.icafe.ui.theme.OffWhiteBackground
 @Composable
 fun AddEditProductScreen(
     navController: NavController,
-    portfolioId: String, // MODIFIED: Added portfolioId
+    portfolioId: String,
     selectedSedeId: String,
     productId: Long?
 ) {
@@ -41,27 +41,38 @@ fun AddEditProductScreen(
     val uiState by viewModel.uiState.collectAsState()
     val formState by viewModel.formState.collectAsState()
 
-    AppScaffold(
+    LaunchedEffect(uiState) {
+        if (uiState is AddEditProductUiState.Success) {
+            navController.popBackStack()
+        }
+    }
+
+
+    AppScaffold( // Línea 56
         title = if (productId == null) "Agregar Producto" else "Editar Producto",
         navController = navController,
-        portfolioId = portfolioId, // MODIFIED: Pass portfolioId to AppScaffold
+        portfolioId = portfolioId,
         selectedSedeId = selectedSedeId
-    ) {
+    ) { // *** CAMBIO CRÍTICO: Eliminar el parámetro de la lambda de AppScaffold ***
+        // AppScaffold probablemente no pasa el PaddingValues a su content.
+        // El padding lo manejaremos directamente en la columna si es necesario, o AppScaffold ya lo maneja.
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(OffWhiteBackground)
-                .padding(16.dp)
+                // .padding(innerPadding) // ELIMINAR ESTA LÍNEA si AppScaffold ya maneja el padding global
+                .padding(horizontal = 16.dp, vertical = 16.dp) // Añadir padding manual si es necesario
         ) {
             when (uiState) {
                 is AddEditProductUiState.Loading, is AddEditProductUiState.LoadingSupplyItems -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 }
-                is AddEditProductUiState.Success, is AddEditProductUiState.Error, is AddEditProductUiState.Editing -> {
+                is AddEditProductUiState.Success -> { /* El LaunchedEffect de arriba maneja la navegación */ }
+                is AddEditProductUiState.ReadyForInput, is AddEditProductUiState.Editing, is AddEditProductUiState.Error -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .weight(1f), // Occupy available space, allowing scrolling
+                            .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         StyledTextField(
@@ -85,14 +96,13 @@ fun AddEditProductScreen(
                         Text("Ingredientes:", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Selected Ingredients List
                         if (formState.selectedIngredients.isEmpty()) {
                             Text("No hay ingredientes añadidos.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         } else {
                             LazyColumn(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(max = 200.dp) // Limit height for scrolling
+                                    .heightIn(max = 200.dp)
                             ) {
                                 items(formState.selectedIngredients, key = { it.supplyItemId }) { ingredient ->
                                     IngredientDisplayItem(
@@ -109,7 +119,6 @@ fun AddEditProductScreen(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Add Ingredient Section
                         AddIngredientSection(
                             availableSupplyItems = formState.availableSupplyItems,
                             onAddIngredient = { supplyItem, quantity -> viewModel.addOrUpdateIngredient(supplyItem, quantity) }
@@ -119,7 +128,7 @@ fun AddEditProductScreen(
                     Button(
                         onClick = { viewModel.saveProduct() },
                         modifier = Modifier.fillMaxWidth().height(50.dp),
-                        enabled = uiState !is AddEditProductUiState.Loading // Disable button when loading
+                        enabled = uiState !is AddEditProductUiState.Loading
                     ) {
                         if (uiState is AddEditProductUiState.Loading) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp))
@@ -128,14 +137,7 @@ fun AddEditProductScreen(
                         }
                     }
 
-                    // Display success or error messages
-                    if (uiState is AddEditProductUiState.Success) {
-                        Text((uiState as AddEditProductUiState.Success).message, color = MaterialTheme.colorScheme.primary)
-                        // Trigger navigation back after a short delay or user acknowledgment
-                        LaunchedEffect(Unit) {
-                            navController.popBackStack() // Navigate back on success
-                        }
-                    } else if (uiState is AddEditProductUiState.Error) {
+                    if (uiState is AddEditProductUiState.Error) {
                         Text((uiState as AddEditProductUiState.Error).message, color = MaterialTheme.colorScheme.error)
                     }
                 }
@@ -160,7 +162,6 @@ fun AddIngredientSection(
     ) {
         Text("Añadir nuevo ingrediente:", style = MaterialTheme.typography.titleSmall)
 
-        // Dropdown for selecting Supply Item
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = !expanded }
@@ -235,8 +236,6 @@ fun IngredientDisplayItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-
-
             Text(text = ingredient.unit, style = MaterialTheme.typography.bodySmall)
 
             IconButton(onClick = onRemove) {

@@ -1,5 +1,6 @@
 package com.example.icafe.features.inventory.presentation
 
+import android.util.Log // IMPORTANTE: Añadir esta importación
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +31,8 @@ import com.example.icafe.ui.theme.*
 
 @Composable
 fun InventoryLandingScreen(navController: NavController, portfolioId: String, selectedSedeId: String) {
+    Log.d("InventoryLandingScreen", "Recibido: portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'") // LOG AÑADIDO
+
     AppScaffold(
         title = "Inventario",
         navController = navController,
@@ -75,21 +78,30 @@ fun InventoryLandingScreen(navController: NavController, portfolioId: String, se
                 text = "Administrar Insumos",
                 icon = { Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = BrownDark) },
                 backgroundColor = Peach,
-                onClick = { navController.navigate(Route.ItemList.createRoute(portfolioId, selectedSedeId)) } // MODIFIED: Pass portfolioId
+                onClick = {
+                    Log.d("InventoryLandingScreen", "Navegando a ItemList con portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'") // LOG AÑADIDO
+                    navController.navigate(Route.ItemList.createRoute(portfolioId, selectedSedeId))
+                }
             )
 
             InventoryLandingButton(
                 text = "Administrar Productos",
                 icon = { Icon(Icons.Default.LocalCafe, contentDescription = null, tint = BrownDark) },
                 backgroundColor = Peach,
-                onClick = { navController.navigate(Route.ProductList.createRoute(portfolioId, selectedSedeId)) } // MODIFIED: Pass portfolioId
+                onClick = {
+                    Log.d("InventoryLandingScreen", "Navegando a ProductList con portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'") // LOG AÑADIDO
+                    navController.navigate(Route.ProductList.createRoute(portfolioId, selectedSedeId))
+                }
             )
 
             InventoryLandingButton(
                 text = "Ver Movimientos de Inventario",
                 icon = { Icon(Icons.Default.ListAlt, contentDescription = null, tint = BrownDark) },
                 backgroundColor = Peach,
-                onClick = { navController.navigate(Route.InventoryMovements.createRoute(portfolioId, selectedSedeId)) } // MODIFIED: Pass portfolioId
+                onClick = {
+                    Log.d("InventoryLandingScreen", "Navegando a InventoryMovements con portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'") // LOG AÑADIDO
+                    navController.navigate(Route.InventoryMovements.createRoute(portfolioId, selectedSedeId))
+                }
             )
         }
     }

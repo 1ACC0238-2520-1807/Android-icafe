@@ -8,11 +8,7 @@ interface InventoryApiService {
 
     // --- Endpoints de Movimientos de Inventario (StockMovement) ---
 
-    // MODIFICADO: Este endpoint NO EXISTE en el backend.
-    // Se comentará o eliminará, y el frontend mostrará el mensaje "No disponible".
-    // @GET("/api/v1/inventory/movements/branch/{branchId}")
-    // suspend fun getAllMovementsByBranch(@Path("branchId") branchId: Long): Response<List<InventoryTransactionResource>>
-
+    // *** RESTAURADO: Espera InventoryTransactionResource de nuevo ***
     @POST("/api/v1/inventory/movements")
     suspend fun registerMovement(@Body transactionData: CreateInventoryTransactionResource): Response<InventoryTransactionResource>
 

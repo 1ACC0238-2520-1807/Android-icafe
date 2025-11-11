@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,123 +26,93 @@ import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.features.products.data.network.ProductResource
 import com.example.icafe.ui.theme.*
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.compose.ui.platform.LocalLifecycleOwner
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductListScreen(navController: NavController, portfolioId: String, selectedSedeId: String) { // MODIFIED: Added portfolioId
+fun ProductListScreen(navController: NavController, portfolioId: String, selectedSedeId: String) {
     val viewModel: ProductListViewModel = viewModel(
-        factory = ProductListViewModelFactory(portfolioId, selectedSedeId) // MODIFIED: Pass portfolioId
+        // *** CAMBIO CRÍTICO: Acceder a la fábrica a través del companion object del ViewModel ***
+        factory = ProductListViewModel.ProductListViewModelFactory(portfolioId, selectedSedeId)
     )
     val uiState by viewModel.uiState.collectAsState()
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
+            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    viewModel.loadProducts()
+                }
+            }
+        })
+    }
 
     AppScaffold(
         title = "Productos",
         navController = navController,
-        portfolioId = portfolioId, // MODIFIED: Pass portfolioId
+        portfolioId = portfolioId,
         selectedSedeId = selectedSedeId
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(OffWhiteBackground)
-                .padding(16.dp)
-        ) {
-            // Botón "Agregar Producto" en la parte superior
-            Button(
-                onClick = { navController.navigate(Route.AddProduct.createRoute(portfolioId, selectedSedeId)) }, // MODIFIED: Pass portfolioId
+        Scaffold(
+            floatingActionButton = {
+                FloatingActionButton(onClick = { navController.navigate(Route.AddProduct.createRoute(portfolioId, selectedSedeId)) }) {
+                    Icon(Icons.Default.Add, contentDescription = "Agregar Producto")
+                }
+            }
+        ) { padding ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = OliveGreen)
+                    .fillMaxSize()
+                    .background(OffWhiteBackground)
+                    .padding(padding)
+                    .padding(horizontal = 16.dp)
             ) {
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "Agregar Producto",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Agregar",
-                        tint = Color.White
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Cabecera de la tabla
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Cabecera "Producto"
-                Card(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = BrownMedium)
-                ) {
-                    Text(
-                        text = "Producto",
-                        modifier = Modifier
-                            .padding(vertical = 12.dp)
-                            .fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                }
-
-                // Espacio para el botón "Ver más"
-                Spacer(modifier = Modifier.width(100.dp))
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Box(modifier = Modifier.weight(1f)) {
-                when (val state = uiState) {
-                    is ProductListUiState.Loading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                color = OliveGreen
-                            )
-                        }
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = BrownMedium)
+                    ) {
+                        Text(
+                            text = "Producto",
+                            modifier = Modifier
+                                .padding(vertical = 12.dp)
+                                .fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
                     }
-                    is ProductListUiState.Error -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+
+                    Spacer(modifier = Modifier.width(100.dp))
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Box(modifier = Modifier.weight(1f)) {
+                    when (val state = uiState) {
+                        is ProductListUiState.Loading -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = state.message,
-                                    color = MaterialTheme.colorScheme.error,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(16.dp)
+                                CircularProgressIndicator(
+                                    color = OliveGreen
                                 )
-                                Button(
-                                    onClick = { viewModel.refreshProducts() },
-                                    colors = ButtonDefaults.buttonColors(containerColor = OliveGreen)
-                                ) {
-                                    Text("Reintentar", color = Color.White)
-                                }
                             }
                         }
-                    }
-                    is ProductListUiState.Success -> {
-                        if (state.products.isEmpty()) {
+                        is ProductListUiState.Error -> {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
@@ -151,31 +122,57 @@ fun ProductListScreen(navController: NavController, portfolioId: String, selecte
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Text(
-                                        text = "No hay productos registrados.",
+                                        text = state.message,
+                                        color = MaterialTheme.colorScheme.error,
                                         textAlign = TextAlign.Center,
-                                        fontSize = 16.sp,
-                                        color = Color.Gray,
-                                        modifier = Modifier.padding(bottom = 8.dp)
+                                        modifier = Modifier.padding(16.dp)
                                     )
-                                    Text(
-                                        text = "Presiona 'Agregar Producto' para agregar el primero.",
-                                        textAlign = TextAlign.Center,
-                                        fontSize = 14.sp,
-                                        color = Color.Gray
-                                    )
+                                    Button(
+                                        onClick = { viewModel.refreshProducts() },
+                                        colors = ButtonDefaults.buttonColors(containerColor = OliveGreen)
+                                    ) {
+                                        Text("Reintentar", color = Color.White)
+                                    }
                                 }
                             }
-                        } else {
-                            LazyColumn(
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                items(state.products, key = { it.id }) { product ->
-                                    ProductTableItem(
-                                        product = product,
-                                        onClick = {
-                                            navController.navigate(Route.ProductDetail.createRoute(portfolioId, selectedSedeId, product.id)) // MODIFIED: Pass portfolioId
-                                        }
-                                    )
+                        }
+                        is ProductListUiState.Success -> {
+                            if (state.products.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "No hay productos registrados.",
+                                            textAlign = TextAlign.Center,
+                                            fontSize = 16.sp,
+                                            color = Color.Gray,
+                                            modifier = Modifier.padding(bottom = 8.dp)
+                                        )
+                                        Text(
+                                            text = "Presiona el botón '+' para agregar el primero.",
+                                            textAlign = TextAlign.Center,
+                                            fontSize = 14.sp,
+                                            color = Color.Gray
+                                        )
+                                    }
+                                }
+                            } else {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    items(state.products, key = { it.id }) { product ->
+                                        ProductTableItem(
+                                            product = product,
+                                            onClick = {
+                                                navController.navigate(Route.ProductDetail.createRoute(portfolioId, selectedSedeId, product.id))
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -196,7 +193,6 @@ fun ProductTableItem(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Campo "Producto"
         Surface(
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(12.dp),
@@ -210,7 +206,6 @@ fun ProductTableItem(
             )
         }
 
-        // Botón "Ver más"
         Button(
             onClick = onClick,
             shape = RoundedCornerShape(12.dp),
