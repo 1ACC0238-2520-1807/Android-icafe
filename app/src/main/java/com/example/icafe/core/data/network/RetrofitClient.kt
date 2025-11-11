@@ -8,17 +8,12 @@ import retrofit2.converter.gson.GsonConverterFactory
 import com.example.icafe.features.inventory.data.network.InventoryApiService
 import com.example.icafe.features.products.data.network.ProductApiService
 import com.example.icafe.core.data.network.BranchApiService
+import com.example.icafe.features.finances.data.network.SalesApiService
+import com.example.icafe.features.finances.data.network.PurchaseOrdersApiService
+import com.example.icafe.core.data.network.AuthApiService // Asegúrate de esta importación
 
-// Ya no necesitamos importar ninguna clase de java.time aquí
 import com.google.gson.GsonBuilder
-import com.google.gson.JsonDeserializer
-import com.google.gson.JsonPrimitive
-import com.google.gson.JsonSerializer
-// import java.time.LocalDate // REMOVED
-// import java.time.LocalDateTime // REMOVED
-// import java.time.OffsetDateTime // REMOVED
-// import java.time.format.DateTimeFormatter // REMOVED
-// import java.time.format.DateTimeParseException // REMOVED
+import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
     private const val BASE_URL = "http://upc-icafebackend-3sger0-aa823d-31-97-13-234.traefik.me/"
@@ -28,16 +23,14 @@ object RetrofitClient {
     }
 
     private val gson = GsonBuilder()
-        // CAMBIO: Se remueve el deserializador para LocalDate también.
-        // Asegúrate de que TODOS tus DTOs que antes usaban LocalDate ahora usen String.
-        // .registerTypeAdapter(LocalDate::class.java, JsonDeserializer { json, typeOfT, context ->
-        //     LocalDate.parse(json.asString, DateTimeFormatter.ISO_LOCAL_DATE)
-        // })
-        .create() // No hay adaptadores de fecha/hora personalizados si todo es String
+        .create()
 
     private val httpClient = OkHttpClient.Builder()
+        .addInterceptor(AuthInterceptor()) // Aquí es donde se usa tu AuthInterceptor
         .addInterceptor(loggingInterceptor)
-        .addInterceptor(AuthInterceptor())
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
     private val retrofit = Retrofit.Builder()
@@ -64,5 +57,13 @@ object RetrofitClient {
 
     val branchApi: BranchApiService by lazy {
         retrofit.create(BranchApiService::class.java)
+    }
+
+    val salesApi: SalesApiService by lazy {
+        retrofit.create(SalesApiService::class.java)
+    }
+
+    val purchaseOrdersApi: PurchaseOrdersApiService by lazy {
+        retrofit.create(PurchaseOrdersApiService::class.java)
     }
 }

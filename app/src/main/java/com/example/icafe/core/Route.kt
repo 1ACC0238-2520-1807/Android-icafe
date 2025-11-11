@@ -18,7 +18,7 @@ sealed class Route(val route: String) {
         fun createRoute(portfolioId: String, selectedSedeId: String) = "dashboard/$portfolioId/$selectedSedeId"
     }
 
-    // Contacts Landing (NEW ROUTE)
+    // Contacts Landing
     object ContactsLanding : Route("contacts_landing/{portfolioId}/{selectedSedeId}") {
         fun createRoute(portfolioId: String, selectedSedeId: String) = "contacts_landing/$portfolioId/$selectedSedeId"
     }
@@ -51,12 +51,12 @@ sealed class Route(val route: String) {
         fun createRoute(portfolioId: String, selectedSedeId: String, providerId: Long) = "provider_edit/$portfolioId/$selectedSedeId/$providerId"
     }
 
-    // Rutas para Inventario Landing (for bottom nav)
+    // Rutas para Inventario Landing
     object InventoryLanding : Route("inventory_landing/{portfolioId}/{selectedSedeId}") {
         fun createRoute(portfolioId: String, selectedSedeId: String) = "inventory_landing/$portfolioId/$selectedSedeId"
     }
 
-    // Rutas para Insumos (MODIFIED: Added portfolioId)
+    // Rutas para Insumos
     object ItemList : Route("item_list/{portfolioId}/{selectedSedeId}") {
         fun createRoute(portfolioId: String, selectedSedeId: String) = "item_list/$portfolioId/$selectedSedeId"
     }
@@ -70,12 +70,12 @@ sealed class Route(val route: String) {
         fun createRoute(portfolioId: String, selectedSedeId: String, itemId: Long) = "item_edit/$portfolioId/$selectedSedeId/$itemId"
     }
 
-    // Rutas para Movimientos de Inventario (MODIFIED: Added portfolioId)
+    // Rutas para Movimientos de Inventario
     object InventoryMovements : Route("inventory_movements/{portfolioId}/{selectedSedeId}") {
         fun createRoute(portfolioId: String, selectedSedeId: String) = "inventory_movements/$portfolioId/$selectedSedeId"
     }
 
-    // Rutas para Productos (MODIFIED: Added portfolioId)
+    // Rutas para Productos
     object ProductList : Route("product_list/{portfolioId}/{selectedSedeId}") {
         fun createRoute(portfolioId: String, selectedSedeId: String) = "product_list/$portfolioId/$selectedSedeId"
     }
@@ -89,7 +89,30 @@ sealed class Route(val route: String) {
         fun createRoute(portfolioId: String, selectedSedeId: String, productId: Long) = "product_edit/$portfolioId/$selectedSedeId/$productId"
     }
 
-    // Placeholder for future features
+    // Rutas para Finanzas (NUEVO)
+    object FinanceLanding : Route("finance_landing/{portfolioId}/{selectedSedeId}") {
+        fun createRoute(portfolioId: String, selectedSedeId: String) = "finance_landing/$portfolioId/$selectedSedeId"
+    }
+    object SalesList : Route("sales_list/{portfolioId}/{selectedSedeId}") {
+        fun createRoute(portfolioId: String, selectedSedeId: String) = "sales_list/$portfolioId/$selectedSedeId"
+    }
+    object AddSale : Route("add_sale/{portfolioId}/{selectedSedeId}") {
+        fun createRoute(portfolioId: String, selectedSedeId: String) = "add_sale/$portfolioId/$selectedSedeId"
+    }
+    object SalesDetail : Route("sales_detail/{portfolioId}/{selectedSedeId}/{saleId}") {
+        fun createRoute(portfolioId: String, selectedSedeId: String, saleId: Long) = "sales_detail/$portfolioId/$selectedSedeId/$saleId"
+    }
+    object PurchaseOrderList : Route("purchase_order_list/{portfolioId}/{selectedSedeId}") {
+        fun createRoute(portfolioId: String, selectedSedeId: String) = "purchase_order_list/$portfolioId/$selectedSedeId"
+    }
+    object AddPurchaseOrder : Route("add_purchase_order/{portfolioId}/{selectedSedeId}") {
+        fun createRoute(portfolioId: String, selectedSedeId: String) = "add_purchase_order/$portfolioId/$selectedSedeId"
+    }
+    object PurchaseOrderDetail : Route("purchase_order_detail/{portfolioId}/{selectedSedeId}/{purchaseOrderId}") {
+        fun createRoute(portfolioId: String, selectedSedeId: String, purchaseOrderId: Long) = "purchase_order_detail/$portfolioId/$selectedSedeId/$purchaseOrderId"
+    }
+
+    // Placeholder para futuras características (estos serán reemplazados por implementaciones adecuadas más adelante)
     object Purchases : Route("purchases/{portfolioId}/{selectedSedeId}") {
         fun createRoute(portfolioId: String, selectedSedeId: String) = "purchases/$portfolioId/$selectedSedeId"
     }

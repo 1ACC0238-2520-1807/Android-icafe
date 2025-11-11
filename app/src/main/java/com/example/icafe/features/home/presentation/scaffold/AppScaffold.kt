@@ -62,7 +62,7 @@ fun AppScaffold(
         NavigationItem(
             label = "Finanzas",
             icon = { Icon(Icons.Default.AttachMoney, contentDescription = "Finanzas") }, // Changed icon
-            route = Route.Sales.createRoute(portfolioId ?: "0", selectedSedeId ?: "0") // Navigates to Sales as primary finance view
+            route = Route.FinanceLanding.createRoute(portfolioId ?: "0", selectedSedeId ?: "0") // MODIFICADO: Ahora navega a FinanceLanding
         ),
         NavigationItem(
             label = "Movimientos", // Changed label from Grafico to Movimientos
@@ -75,11 +75,11 @@ fun AppScaffold(
         NavigationItem(label = "Dashboard", icon = { Icon(Icons.Default.Dashboard, contentDescription = null) }, route = Route.Dashboard.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
         NavigationItem(label = "Empleados", icon = { Icon(Icons.Default.Person, contentDescription = null) }, route = Route.EmployeeList.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
         NavigationItem(label = "Proveedores", icon = { Icon(Icons.Default.LocalShipping, contentDescription = null) }, route = Route.ProviderList.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
-        NavigationItem(label = "Insumos", icon = { Icon(Icons.Default.ShoppingBasket, contentDescription = null) }, route = Route.ItemList.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")), // MODIFIED: Pass portfolioId
-        NavigationItem(label = "Productos", icon = { Icon(Icons.Default.LocalCafe, contentDescription = null) }, route = Route.ProductList.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")), // MODIFIED: Pass portfolioId
-        NavigationItem(label = "Registrar Ventas", icon = { Icon(Icons.Default.MonetizationOn, contentDescription = null) }, route = Route.Sales.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
-        NavigationItem(label = "Registrar Compras", icon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) }, route = Route.Purchases.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
-        NavigationItem(label = "Movimientos Inventario", icon = { Icon(Icons.Default.Moving, contentDescription = null) }, route = Route.InventoryMovements.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")), // MODIFIED: Pass portfolioId
+        NavigationItem(label = "Insumos", icon = { Icon(Icons.Default.ShoppingBasket, contentDescription = null) }, route = Route.ItemList.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
+        NavigationItem(label = "Productos", icon = { Icon(Icons.Default.LocalCafe, contentDescription = null) }, route = Route.ProductList.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
+        NavigationItem(label = "Registrar Ventas", icon = { Icon(Icons.Default.MonetizationOn, contentDescription = null) }, route = Route.AddSale.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")), // MODIFICADO
+        NavigationItem(label = "Registrar Compras", icon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) }, route = Route.AddPurchaseOrder.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")), // MODIFICADO
+        NavigationItem(label = "Movimientos Inventario", icon = { Icon(Icons.Default.Moving, contentDescription = null) }, route = Route.InventoryMovements.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
         NavigationItem(label = "Cerrar Sesión", icon = { Icon(Icons.Default.Logout, contentDescription = null) }, route = Route.Login.route)
     )
 

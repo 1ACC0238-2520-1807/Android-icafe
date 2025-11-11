@@ -22,14 +22,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import android.util.Log // IMPORTANTE: Añadir esta importación
+import android.util.Log
 
-// New import
+// Nuevas importaciones necesarias para las pantallas de Finanzas
 import com.example.icafe.features.contacts.presentation.ContactsLandingScreen
 import com.example.icafe.features.auth.presentation.login.Login
 import com.example.icafe.features.auth.presentation.register.Register
 
-// Imports for Contacts (Employees/Providers)
+// Importaciones para Contactos (Empleados/Proveedores)
 import com.example.icafe.features.contacts.presentation.employee.AddEditEmployeeScreen
 import com.example.icafe.features.contacts.presentation.employee.EmployeeDetailScreen
 import com.example.icafe.features.contacts.presentation.employee.EmployeeListScreen
@@ -37,23 +37,32 @@ import com.example.icafe.features.contacts.presentation.provider.AddEditProvider
 import com.example.icafe.features.contacts.presentation.provider.ProviderDetailScreen
 import com.example.icafe.features.contacts.presentation.provider.ProviderListScreen
 
-// Imports for Inventory
+// Importaciones para Inventario
 import com.example.icafe.features.inventory.presentation.item.AddEditItemScreen
 import com.example.icafe.features.inventory.presentation.item.ItemListScreen
 import com.example.icafe.features.inventory.presentation.InventoryLandingScreen
 import com.example.icafe.features.inventory.presentation.InventoryMovementsScreen
 
-// Imports for Products
+// Importaciones para Productos
 import com.example.icafe.features.products.presentation.AddEditProductScreen
 import com.example.icafe.features.products.presentation.ProductListScreen
 
-
-// Imports for Sede Management
+// Importaciones para Gestión de Sedes
 import com.example.icafe.features.sede.presentation.add.AddEditSedeScreen
 import com.example.icafe.features.sede.presentation.selection.SedeSelectionScreen
 
-// Imports for Dashboard
+// Importaciones para Dashboard
 import com.example.icafe.features.dashboard.presentation.DashboardScreen
+
+// Importaciones para Finanzas (NUEVAS)
+import com.example.icafe.features.finances.presentation.FinanceLandingScreen
+import com.example.icafe.features.finances.presentation.sales.AddSaleScreen
+import com.example.icafe.features.finances.presentation.sales.SalesDetailScreen
+import com.example.icafe.features.finances.presentation.sales.SalesListScreen
+import com.example.icafe.features.finances.presentation.purchase_orders.AddPurchaseOrderScreen
+import com.example.icafe.features.finances.presentation.purchase_orders.PurchaseOrderDetailScreen
+import com.example.icafe.features.finances.presentation.purchase_orders.PurchaseOrderListScreen
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -386,7 +395,101 @@ fun AppNav() {
             AddEditProductScreen(navController, portfolioId, selectedSedeId, productId = productId)
         }
 
-        // --- Placeholder for Sales and Purchases ---
+        // --- Finance Flow (NUEVO) ---
+        composable(
+            route = Route.FinanceLanding.route,
+            arguments = listOf(
+                navArgument("portfolioId") { type = NavType.StringType },
+                navArgument("selectedSedeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
+            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En FinanceLandingScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
+            FinanceLandingScreen(navController, portfolioId, selectedSedeId)
+        }
+        // Pantallas de Ventas
+        composable(
+            route = Route.SalesList.route,
+            arguments = listOf(
+                navArgument("portfolioId") { type = NavType.StringType },
+                navArgument("selectedSedeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
+            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En SalesListScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
+            SalesListScreen(navController, portfolioId, selectedSedeId)
+        }
+        composable(
+            route = Route.AddSale.route,
+            arguments = listOf(
+                navArgument("portfolioId") { type = NavType.StringType },
+                navArgument("selectedSedeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
+            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En AddSaleScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
+            AddSaleScreen(navController, portfolioId, selectedSedeId)
+        }
+        composable(
+            route = Route.SalesDetail.route,
+            arguments = listOf(
+                navArgument("portfolioId") { type = NavType.StringType },
+                navArgument("selectedSedeId") { type = NavType.StringType },
+                navArgument("saleId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
+            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            val saleId = backStackEntry.arguments?.getString("saleId")!!.toLong()
+            Log.d("AppNav", "En SalesDetailScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId', saleId=$saleId")
+            SalesDetailScreen(navController, portfolioId, selectedSedeId, saleId)
+        }
+
+        // Pantallas de Órdenes de Compra
+        composable(
+            route = Route.PurchaseOrderList.route,
+            arguments = listOf(
+                navArgument("portfolioId") { type = NavType.StringType },
+                navArgument("selectedSedeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
+            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En PurchaseOrderListScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
+            PurchaseOrderListScreen(navController, portfolioId, selectedSedeId)
+        }
+        composable(
+            route = Route.AddPurchaseOrder.route,
+            arguments = listOf(
+                navArgument("portfolioId") { type = NavType.StringType },
+                navArgument("selectedSedeId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
+            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            Log.d("AppNav", "En AddPurchaseOrderScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'")
+            AddPurchaseOrderScreen(navController, portfolioId, selectedSedeId)
+        }
+        composable(
+            route = Route.PurchaseOrderDetail.route,
+            arguments = listOf(
+                navArgument("portfolioId") { type = NavType.StringType },
+                navArgument("selectedSedeId") { type = NavType.StringType },
+                navArgument("purchaseOrderId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val portfolioId = backStackEntry.arguments?.getString("portfolioId")!!
+            val selectedSedeId = backStackEntry.arguments?.getString("selectedSedeId")!!
+            val purchaseOrderId = backStackEntry.arguments?.getString("purchaseOrderId")!!.toLong()
+            Log.d("AppNav", "En PurchaseOrderDetailScreen: Extrayendo portfolioId='$portfolioId', selectedSedeId='$selectedSedeId', purchaseOrderId=$purchaseOrderId")
+            PurchaseOrderDetailScreen(navController, portfolioId, selectedSedeId, purchaseOrderId)
+        }
+
+
+        // Placeholder para futuras características (estos ahora son reemplazados por FinanceLanding, SalesList, etc.)
         composable(
             route = Route.Purchases.route,
             arguments = listOf(
@@ -406,7 +509,7 @@ fun AppNav() {
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Sección de Compras para Portfolio $portfolioId y Sede $selectedSedeId",
+                        text = "Sección de Compras para Portfolio $portfolioId y Sede $selectedSedeId (Old Placeholder)",
                         style = MaterialTheme.typography.headlineMedium
                     )
                 }
@@ -431,7 +534,7 @@ fun AppNav() {
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Sección de Ventas para Portfolio $portfolioId y Sede $selectedSedeId",
+                        text = "Sección de Ventas para Portfolio $portfolioId y Sede $selectedSedeId (Old Placeholder)",
                         style = MaterialTheme.typography.headlineMedium
                     )
                 }
