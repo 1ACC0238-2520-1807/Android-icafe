@@ -21,9 +21,16 @@ import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.ui.theme.BrownMedium
 import com.example.icafe.ui.theme.OffWhiteBackground
 
+// NO ES NECESARIO UN IMPORT EXPLICITO SI ESTA EN EL MISMO PAQUETE.
+// Para ser explícitos y seguros, lo mantenemos como estaba si lo has copiado:
+import com.example.icafe.features.contacts.presentation.provider.ProviderDetailViewModelFactory
+
+
 @Composable
-fun ProviderDetailScreen(navController: NavController, portfolioId: String, providerId: Long) {
-    val viewModel: ProviderDetailViewModel = viewModel()
+fun ProviderDetailScreen(navController: NavController, portfolioId: String, selectedSedeId: String, providerId: Long) {
+    val viewModel: ProviderDetailViewModel = viewModel(
+        factory = ProviderDetailViewModelFactory(portfolioId, selectedSedeId, providerId)
+    )
     val provider = viewModel.provider
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -31,8 +38,8 @@ fun ProviderDetailScreen(navController: NavController, portfolioId: String, prov
         viewModel.events.collect { event ->
             when (event) {
                 is ProviderEvent.ActionSuccess -> {
-                    navController.navigate(Route.ProviderList.createRoute(portfolioId)) {
-                        popUpTo(Route.ProviderList.createRoute(portfolioId)) { inclusive = true }
+                    navController.navigate(Route.ProviderList.createRoute(portfolioId, selectedSedeId)) {
+                        popUpTo(Route.ProviderList.createRoute(portfolioId, selectedSedeId)) { inclusive = true }
                     }
                 }
                 is ProviderEvent.ActionError -> { /* Mostrar Snackbar o Toast */ }
@@ -40,7 +47,7 @@ fun ProviderDetailScreen(navController: NavController, portfolioId: String, prov
         }
     }
 
-    AppScaffold(title = "Ver Proveedor", navController = navController, portfolioId = portfolioId) {
+    AppScaffold(title = "Ver Proveedor", navController = navController, portfolioId = portfolioId, selectedSedeId = selectedSedeId) {
         Box(modifier = Modifier.fillMaxSize().background(OffWhiteBackground)) {
             if (viewModel.isLoading && provider == null) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -59,7 +66,7 @@ fun ProviderDetailScreen(navController: NavController, portfolioId: String, prov
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(provider.nameCompany, fontSize = 20.sp, color = Color.White, modifier = Modifier.weight(1f))
-                            IconButton(onClick = { navController.navigate(Route.EditProvider.createRoute(portfolioId, providerId)) }) {
+                            IconButton(onClick = { navController.navigate(Route.EditProvider.createRoute(portfolioId, selectedSedeId, providerId)) }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.White)
                             }
                         }

@@ -34,6 +34,7 @@ class ProviderDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
     val events = _events.asSharedFlow()
 
     private val portfolioId: String = savedStateHandle.get<String>("portfolioId")!!
+    private val selectedSedeId: String = savedStateHandle.get<String>("selectedSedeId")!! // Kept for consistency, not directly used by Providers
     private val providerId: String? = savedStateHandle.get<String>("providerId")
 
     init {
@@ -84,10 +85,11 @@ class ProviderDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                 if (response.isSuccessful) {
                     _events.emit(ProviderEvent.ActionSuccess)
                 } else {
-                    _events.emit(ProviderEvent.ActionError("Error al guardar."))
+                    val errorBody = response.errorBody()?.string() ?: "Error al guardar."
+                    _events.emit(ProviderEvent.ActionError("Error del servidor: $errorBody"))
                 }
             } catch (e: Exception) {
-                _events.emit(ProviderEvent.ActionError("Error de conexión."))
+                _events.emit(ProviderEvent.ActionError("Error de conexión: ${e.message}"))
             } finally {
                 isLoading = false
             }
@@ -103,14 +105,36 @@ class ProviderDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                     if (response.isSuccessful) {
                         _events.emit(ProviderEvent.ActionSuccess)
                     } else {
-                        _events.emit(ProviderEvent.ActionError("Error al eliminar."))
+                        val errorBody = response.errorBody()?.string() ?: "Error al eliminar."
+                        _events.emit(ProviderEvent.ActionError("Error del servidor: $errorBody"))
                     }
                 } catch (e: Exception) {
-                    _events.emit(ProviderEvent.ActionError("Error de conexión."))
+                    _events.emit(ProviderEvent.ActionError("Error de conexión: ${e.message}"))
                 } finally {
                     isLoading = false
                 }
             }
         }
+    }
+}
+
+// DEFINICIÓN DE LA FACTORY - DENTRO DEL MISMO ARCHIVO DEL ViewModel
+class ProviderDetailViewModelFactory(
+    private val portfolioId: String,
+    private val selectedSedeId: String,
+    private val providerId: Long?
+) : androidx.lifecycle.ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(ProviderDetailViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return ProviderDetailViewModel(
+                savedStateHandle = SavedStateHandle().apply {
+                    set("portfolioId", portfolioId)
+                    set("selectedSedeId", selectedSedeId)
+                    set("providerId", providerId?.toString())
+                }
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

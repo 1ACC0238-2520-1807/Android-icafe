@@ -24,9 +24,22 @@ import com.example.icafe.features.contacts.presentation.employee.StyledTextField
 import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.ui.theme.*
 
+// NO ES NECESARIO UN IMPORT EXPLICITO SI ESTA EN EL MISMO PAQUETE,
+// PERO DEJARLO NO HACE DAÑO Y PUEDE AYUDAR AL IDE A RESOLVERLO.
+// Si ya tienes un import para ProviderDetailViewModel, esta línea es redundante
+// ya que la factory está en el mismo archivo/paquete.
+// Si la factory estuviera en un subpaquete o archivo diferente, sí lo necesitarías.
+// Por el momento, si tienes este import y sigue dando error, elimínalo y deja
+// que el IDE lo resuelva automáticamente si está en el mismo paquete.
+// Para ser explícitos y seguros, lo mantenemos como estaba si lo has copiado:
+import com.example.icafe.features.contacts.presentation.provider.ProviderDetailViewModelFactory
+
+
 @Composable
-fun AddEditProviderScreen(navController: NavController, portfolioId: String, providerId: Long?) {
-    val viewModel: ProviderDetailViewModel = viewModel()
+fun AddEditProviderScreen(navController: NavController, portfolioId: String, selectedSedeId: String, providerId: Long?) {
+    val viewModel: ProviderDetailViewModel = viewModel(
+        factory = ProviderDetailViewModelFactory(portfolioId, selectedSedeId, providerId)
+    )
     val isEditMode = providerId != null
     val title = if (isEditMode) "Editar Proveedor" else "Agregar Proveedor"
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -35,8 +48,8 @@ fun AddEditProviderScreen(navController: NavController, portfolioId: String, pro
         viewModel.events.collect { event ->
             when (event) {
                 is ProviderEvent.ActionSuccess -> {
-                    navController.navigate(Route.ProviderList.createRoute(portfolioId)) {
-                        popUpTo(Route.ProviderList.createRoute(portfolioId)) { inclusive = true }
+                    navController.navigate(Route.ProviderList.createRoute(portfolioId, selectedSedeId)) {
+                        popUpTo(Route.ProviderList.createRoute(portfolioId, selectedSedeId)) { inclusive = true }
                     }
                 }
                 is ProviderEvent.ActionError -> { /* Mostrar error */ }
@@ -44,7 +57,7 @@ fun AddEditProviderScreen(navController: NavController, portfolioId: String, pro
         }
     }
 
-    AppScaffold(title = title, navController = navController, portfolioId = portfolioId) {
+    AppScaffold(title = title, navController = navController, portfolioId = portfolioId, selectedSedeId = selectedSedeId) {
         Box(modifier = Modifier.fillMaxSize().background(OffWhiteBackground)) {
             if (viewModel.isLoading && isEditMode) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))

@@ -20,6 +20,7 @@ class ProviderListViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
     val uiState: StateFlow<ProviderListUiState> = _uiState
 
     private val portfolioId: String = savedStateHandle.get<String>("portfolioId")!!
+    private val selectedSedeId: String = savedStateHandle.get<String>("selectedSedeId")!! // Mantenido por consistencia, no utilizado directamente por Proveedores
 
     init {
         loadProviders()
@@ -29,15 +30,35 @@ class ProviderListViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
         _uiState.value = ProviderListUiState.Loading
         viewModelScope.launch {
             try {
+                // Obtener TODOS los proveedores para el portfolioId
                 val response = RetrofitClient.contactsApi.getProviders(portfolioId)
                 if (response.isSuccessful && response.body() != null) {
                     _uiState.value = ProviderListUiState.Success(response.body()!!)
                 } else {
-                    _uiState.value = ProviderListUiState.Error("Error al cargar proveedores.")
+                    val errorBody = response.errorBody()?.string() ?: "Error al cargar proveedores."
+                    _uiState.value = ProviderListUiState.Error(errorBody)
                 }
             } catch (e: Exception) {
                 _uiState.value = ProviderListUiState.Error("Error de conexión: ${e.message}")
             }
+        }
+    }
+
+    class ProviderListViewModelFactory(
+        private val portfolioId: String,
+        private val selectedSedeId: String // No se usa directamente en este ViewModel, pero es necesario para la consistencia
+    ) : androidx.lifecycle.ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(ProviderListViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return ProviderListViewModel(
+                    savedStateHandle = SavedStateHandle().apply {
+                        set("portfolioId", portfolioId)
+                        set("selectedSedeId", selectedSedeId)
+                    }
+                ) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
 }

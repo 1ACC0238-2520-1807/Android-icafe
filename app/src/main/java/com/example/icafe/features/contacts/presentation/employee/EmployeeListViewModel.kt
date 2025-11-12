@@ -20,6 +20,8 @@ class EmployeeListViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
     val uiState: StateFlow<EmployeeListUiState> = _uiState
 
     private val portfolioId: String = savedStateHandle.get<String>("portfolioId")!!
+    private val selectedSedeId: String = savedStateHandle.get<String>("selectedSedeId")!!
+    private val branchId: Long = selectedSedeId.toLongOrNull() ?: 1L // Convertir selectedSedeId a Long
 
     init {
         loadEmployees()
@@ -29,11 +31,16 @@ class EmployeeListViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
         _uiState.value = EmployeeListUiState.Loading
         viewModelScope.launch {
             try {
+                // Obtener TODOS los empleados para el portfolioId
                 val response = RetrofitClient.contactsApi.getEmployees(portfolioId)
                 if (response.isSuccessful && response.body() != null) {
-                    _uiState.value = EmployeeListUiState.Success(response.body()!!)
+                    val allEmployees = response.body()!!
+                    // Filtrar empleados en el lado del cliente por selectedSedeId (branchId)
+                    val filteredEmployees = allEmployees.filter { it.branchId == branchId }
+                    _uiState.value = EmployeeListUiState.Success(filteredEmployees)
                 } else {
-                    _uiState.value = EmployeeListUiState.Error("Error al cargar empleados.")
+                    val errorBody = response.errorBody()?.string() ?: "Error al cargar empleados."
+                    _uiState.value = EmployeeListUiState.Error(errorBody)
                 }
             } catch (e: Exception) {
                 _uiState.value = EmployeeListUiState.Error("Error de conexión: ${e.message}")

@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.SavedStateHandle // Import for SavedStateHandle
+import androidx.lifecycle.ViewModel // Import for ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.icafe.core.Route
@@ -26,14 +28,17 @@ import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.ui.theme.*
 
 @Composable
-fun EmployeeListScreen(navController: NavController, portfolioId: String) {
-    val viewModel: EmployeeListViewModel = viewModel()
+fun EmployeeListScreen(navController: NavController, portfolioId: String, selectedSedeId: String) {
+    val viewModel: EmployeeListViewModel = viewModel(
+        factory = EmployeeListViewModelFactory(portfolioId, selectedSedeId)
+    )
     val uiState by viewModel.uiState.collectAsState()
 
     AppScaffold(
         title = "Empleados",
         navController = navController,
-        portfolioId = portfolioId
+        portfolioId = portfolioId,
+        selectedSedeId = selectedSedeId
     ) {
         Column(
             modifier = Modifier
@@ -43,7 +48,7 @@ fun EmployeeListScreen(navController: NavController, portfolioId: String) {
         ) {
             // Botón "Agregar Empleado"
             Button(
-                onClick = { navController.navigate(Route.AddEmployee.createRoute(portfolioId)) },
+                onClick = { navController.navigate(Route.AddEmployee.createRoute(portfolioId, selectedSedeId)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -66,8 +71,8 @@ fun EmployeeListScreen(navController: NavController, portfolioId: String) {
                 Text(
                     text = "NOMBRE",
                     modifier = Modifier
-                        .padding(vertical = 12.dp)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
                     textAlign = TextAlign.Center,
                     color = Color.White,
                     fontWeight = FontWeight.Bold
@@ -88,9 +93,9 @@ fun EmployeeListScreen(navController: NavController, portfolioId: String) {
                             }
                         } else {
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(state.employees) { employee ->
+                                items(state.employees, key = { it.id }) { employee ->
                                     EmployeeItem(employee = employee) {
-                                        navController.navigate(Route.EmployeeDetail.createRoute(portfolioId, employee.id))
+                                        navController.navigate(Route.EmployeeDetail.createRoute(portfolioId, selectedSedeId, employee.id))
                                     }
                                 }
                             }
@@ -130,5 +135,24 @@ fun EmployeeItem(employee: EmployeeResource, onClick: () -> Unit) {
         ) {
             Text("Ver más", color = Color.White)
         }
+    }
+}
+
+// DEFINICIÓN DE LA FACTORY AQUÍ
+class EmployeeListViewModelFactory(
+    private val portfolioId: String,
+    private val selectedSedeId: String
+) : androidx.lifecycle.ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(EmployeeListViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return EmployeeListViewModel(
+                savedStateHandle = SavedStateHandle().apply {
+                    set("portfolioId", portfolioId)
+                    set("selectedSedeId", selectedSedeId)
+                }
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

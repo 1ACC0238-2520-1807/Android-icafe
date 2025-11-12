@@ -17,8 +17,7 @@ sealed class RegisterUiState {
 }
 
 class RegisterViewModel : ViewModel() {
-    // --- CAMBIO CLAVE AQUÍ ---
-    private val authApi = RetrofitClient.authApi // Cambiado de .instance a .authApi
+    private val authApi = RetrofitClient.authApi
 
     // Campos del formulario
     var email by mutableStateOf("")
@@ -47,7 +46,6 @@ class RegisterViewModel : ViewModel() {
                     email = email,
                     password = password
                 )
-                // Usamos la variable 'authApi' que definimos arriba
                 val response = authApi.register(request)
 
                 if (response.isSuccessful) {

@@ -1,159 +1,145 @@
 package com.example.icafe.features.products.presentation
 
+import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.icafe.core.data.network.RetrofitClient
-import com.example.icafe.features.inventory.data.network.ItemResource
-import com.example.icafe.features.inventory.data.network.UnitMeasureType
-import com.example.icafe.features.products.data.network.ProductComponent
-import com.example.icafe.features.products.data.network.ProductRequest
+import com.example.icafe.features.inventory.data.network.SupplyItemResource
+import com.example.icafe.features.products.data.network.AddIngredientRequest
+import com.example.icafe.features.products.data.network.CreateProductRequest
 import com.example.icafe.features.products.data.network.ProductResource
-import com.example.icafe.features.products.data.network.ProductStatus
-import com.example.icafe.features.products.data.network.ProductType
 import com.example.icafe.features.products.data.network.UpdateProductRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.lang.Exception
 
 sealed class AddEditProductUiState {
     object Loading : AddEditProductUiState()
-    object LoadingItems : AddEditProductUiState()
+    object LoadingSupplyItems : AddEditProductUiState()
+    object ReadyForInput : AddEditProductUiState()
     data class Success(val message: String) : AddEditProductUiState()
     data class Error(val message: String) : AddEditProductUiState()
     data class Editing(val product: ProductResource) : AddEditProductUiState()
 }
 
 data class ProductFormState(
+    val branchId: Long = 1L,
     val name: String = "",
-    val category: String = "",
-    val portions: Int = 1,
-    val steps: String = "",
-    val selectedComponents: List<ProductComponentForm> = emptyList(),
-    val availableItems: List<ItemResource> = emptyList()
+    val costPrice: String = "",
+    val profitMargin: String = "",
+    val selectedIngredients: List<ProductIngredientForm> = emptyList(),
+    val availableSupplyItems: List<SupplyItemResource> = emptyList()
 )
 
-data class ProductComponentForm(
-    val itemId: Long,
-    val itemName: String,
-    val unitMeasure: UnitMeasureType,
-    val quantity: Double = 0.0
+data class ProductIngredientForm(
+    val supplyItemId: Long,
+    val supplyItemName: String,
+    val unit: String,
+    val quantity: String = ""
 )
 
-class AddEditProductViewModel : ViewModel() {
-    private val _uiState = MutableStateFlow<AddEditProductUiState>(AddEditProductUiState.LoadingItems)
+class AddEditProductViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
+    private val _uiState = MutableStateFlow<AddEditProductUiState>(AddEditProductUiState.LoadingSupplyItems)
     val uiState: StateFlow<AddEditProductUiState> = _uiState
 
     private val _formState = MutableStateFlow(ProductFormState())
     val formState: StateFlow<ProductFormState> = _formState
 
-    private var productId: Long? = null
+    private val portfolioId: String = savedStateHandle.get<String>("portfolioId")!!
+    private val selectedSedeId: String = savedStateHandle.get<String>("selectedSedeId")!!
+    private val branchId: Long = selectedSedeId.toLongOrNull() ?: 1L
+    private var productId: Long? = savedStateHandle.get<String>("productId")?.toLongOrNull()
 
     init {
-        // Cargar insumos disponibles inmediatamente
-        loadAvailableItems()
-    }
-
-    fun setProductId(id: Long?) {
-        productId = id
-        if (id != null) {
-            loadProductForEdit(id)
-        }
+        _formState.value = _formState.value.copy(branchId = branchId)
+        loadAvailableSupplyItems()
     }
 
     fun updateName(name: String) {
         _formState.value = _formState.value.copy(name = name)
     }
 
-    fun updateCategory(category: String) {
-        _formState.value = _formState.value.copy(category = category)
+    fun updateCostPrice(costPrice: String) {
+        _formState.value = _formState.value.copy(costPrice = costPrice)
     }
 
-    fun updatePortions(portions: Int) {
-        _formState.value = _formState.value.copy(portions = portions)
+    fun updateProfitMargin(profitMargin: String) {
+        _formState.value = _formState.value.copy(profitMargin = profitMargin)
     }
 
-    fun updateSteps(steps: String) {
-        _formState.value = _formState.value.copy(steps = steps)
-    }
+    fun addOrUpdateIngredient(supplyItem: SupplyItemResource, quantity: String) {
+        val currentIngredients = _formState.value.selectedIngredients.toMutableList()
+        val existingIndex = currentIngredients.indexOfFirst { it.supplyItemId == supplyItem.id }
 
-    fun addComponent(item: ItemResource, quantity: Double) {
-        val currentComponents = _formState.value.selectedComponents.toMutableList()
-        val existingIndex = currentComponents.indexOfFirst { it.itemId == item.id }
-        
         if (existingIndex >= 0) {
-            // Actualizar cantidad existente
-            currentComponents[existingIndex] = currentComponents[existingIndex].copy(quantity = quantity)
+            currentIngredients[existingIndex] = currentIngredients[existingIndex].copy(quantity = quantity)
         } else {
-            // Agregar nuevo componente
-            currentComponents.add(
-                ProductComponentForm(
-                    itemId = item.id,
-                    itemName = item.nombre,
-                    unitMeasure = item.unidadMedida,
+            currentIngredients.add(
+                ProductIngredientForm(
+                    supplyItemId = supplyItem.id,
+                    supplyItemName = supplyItem.name,
+                    unit = supplyItem.unit,
                     quantity = quantity
                 )
             )
         }
-        
-        _formState.value = _formState.value.copy(selectedComponents = currentComponents)
+        _formState.value = _formState.value.copy(selectedIngredients = currentIngredients)
     }
 
-    fun removeComponent(itemId: Long) {
-        val currentComponents = _formState.value.selectedComponents.toMutableList()
-        currentComponents.removeAll { it.itemId == itemId }
-        _formState.value = _formState.value.copy(selectedComponents = currentComponents)
+    fun removeIngredientFromForm(supplyItemId: Long) {
+        val currentIngredients = _formState.value.selectedIngredients.toMutableList()
+        currentIngredients.removeAll { it.supplyItemId == supplyItemId }
+        _formState.value = _formState.value.copy(selectedIngredients = currentIngredients)
     }
 
     fun saveProduct() {
-        if (!isFormValid()) return
+        val costPriceValue = _formState.value.costPrice.toDoubleOrNull()
+        val profitMarginValue = _formState.value.profitMargin.toDoubleOrNull()
+
+        if (!isFormValid(costPriceValue, profitMarginValue)) {
+            _uiState.value = AddEditProductUiState.Error("Por favor, completa todos los campos requeridos y añade al menos un ingrediente.")
+            return
+        }
 
         _uiState.value = AddEditProductUiState.Loading
         viewModelScope.launch {
             try {
                 val formData = _formState.value
-                val components = formData.selectedComponents.map { 
-                    ProductComponent(it.itemId, it.quantity)
-                }
-
-                val productRequest = ProductRequest(
-                    ownerId = 1L, // TODO: Obtener del usuario autenticado
-                    branchId = 1L, // TODO: Obtener de la sede seleccionada
-                    name = formData.name,
-                    category = formData.category,
-                    type = ProductType.SIMPLE,
-                    portions = formData.portions,
-                    steps = formData.steps,
-                    directItem = null, // TODO: Implementar si es necesario
-                    components = components
-                )
-
-                val updateRequest = UpdateProductRequest(
-                    name = formData.name,
-                    category = formData.category,
-                    type = ProductType.SIMPLE,
-                    status = ProductStatus.ACTIVE,
-                    portions = formData.portions,
-                    steps = formData.steps,
-                    directItem = null, // TODO: Implementar si es necesario
-                    components = components
-                )
 
                 if (productId != null) {
-                    // Actualizar producto existente
-                    val response = RetrofitClient.productApi.updateProduct(productId!!,
-                        updateRequest)
+                    val updateRequest = UpdateProductRequest(
+                        name = formData.name,
+                        costPrice = costPriceValue!!,
+                        profitMargin = profitMarginValue!!
+                    )
+                    val response = RetrofitClient.productApi.updateProduct(productId!!, updateRequest)
                     if (response.isSuccessful) {
+                        updateProductIngredients(productId!!, formData.selectedIngredients)
                         _uiState.value = AddEditProductUiState.Success("Producto actualizado correctamente")
                     } else {
-                        _uiState.value = AddEditProductUiState.Error("Error al actualizar el producto")
+                        val errorBody = response.errorBody()?.string() ?: "Error desconocido al actualizar."
+                        _uiState.value = AddEditProductUiState.Error(errorBody)
                     }
                 } else {
-                    // Crear nuevo producto
-                    val response = RetrofitClient.productApi.addProduct(productRequest)
-                    if (response.isSuccessful) {
+                    val createRequest = CreateProductRequest(
+                        branchId = formData.branchId,
+                        name = formData.name,
+                        costPrice = costPriceValue!!,
+                        profitMargin = profitMarginValue!!
+                    )
+                    val response = RetrofitClient.productApi.createProduct(createRequest)
+                    if (response.isSuccessful && response.body() != null) {
+                        val newProductId = response.body()!!.id
+                        updateProductIngredients(newProductId, formData.selectedIngredients)
                         _uiState.value = AddEditProductUiState.Success("Producto creado correctamente")
                     } else {
-                        _uiState.value = AddEditProductUiState.Error("Error al crear el producto")
+                        val errorBody = response.errorBody()?.string() ?: "Error desconocido al crear."
+                        _uiState.value = AddEditProductUiState.Error(errorBody)
                     }
                 }
             } catch (e: Exception) {
@@ -162,14 +148,64 @@ class AddEditProductViewModel : ViewModel() {
         }
     }
 
-    private fun loadAvailableItems() {
-        _uiState.value = AddEditProductUiState.LoadingItems
+    private suspend fun updateProductIngredients(productId: Long, newIngredients: List<ProductIngredientForm>) {
+        val currentProductResponse = RetrofitClient.productApi.getProductById(productId)
+        val currentBackendIngredients = if (currentProductResponse.isSuccessful && currentProductResponse.body() != null) {
+            val product = currentProductResponse.body()!!
+            if (product.branchId != branchId) {
+                Log.w("AddEditProductViewModel", "Product $productId does not belong to branch $branchId. Skipping ingredient update.")
+                emptyList()
+            } else {
+                product.ingredients
+            }
+        } else {
+            emptyList()
+        }
+
+        val ingredientsToRemove = currentBackendIngredients.filter { backendIng ->
+            newIngredients.none { newIng -> newIng.supplyItemId == backendIng.supplyItemId }
+        }
+        for (ingredient in ingredientsToRemove) {
+            // Asegúrate de usar el supplyItemId correcto para eliminar
+            RetrofitClient.productApi.removeIngredientFromProduct(productId, ingredient.supplyItemId)
+        }
+
+        for (newIngredient in newIngredients) {
+            val quantity = newIngredient.quantity.toDoubleOrNull()
+            if (quantity != null && quantity > 0) {
+                // Si el ingrediente ya existe en el backend, no lo volvemos a añadir
+                // Aquí podrías añadir lógica para actualizar la cantidad si ya existe
+                val existingBackendIngredient = currentBackendIngredients.find { it.supplyItemId == newIngredient.supplyItemId }
+                if (existingBackendIngredient == null) {
+                    RetrofitClient.productApi.addIngredientToProduct(productId, AddIngredientRequest(newIngredient.supplyItemId, quantity))
+                } else if (existingBackendIngredient.quantity != quantity) {
+                    // Si ya existe y la cantidad cambió, podrías optar por eliminarlo y volverlo a añadir
+                    // o tener un endpoint específico para actualizar la cantidad de un ingrediente.
+                    // Por simplicidad en este ejemplo, no se implementa una lógica de actualización directa aquí.
+                    // Se asume que AddIngredientToProduct podría manejar la actualización si el backend lo permite
+                    // o se necesitaría un DELETE + POST para actualizar.
+                    RetrofitClient.productApi.removeIngredientFromProduct(productId, existingBackendIngredient.supplyItemId)
+                    RetrofitClient.productApi.addIngredientToProduct(productId, AddIngredientRequest(newIngredient.supplyItemId, quantity))
+                }
+            }
+        }
+    }
+
+
+    private fun loadAvailableSupplyItems() {
+        _uiState.value = AddEditProductUiState.LoadingSupplyItems
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.inventoryApi.getItems()
+                val response = RetrofitClient.productApi.getAllSupplyItems()
                 if (response.isSuccessful && response.body() != null) {
-                    _formState.value = _formState.value.copy(availableItems = response.body()!!)
-                    _uiState.value = AddEditProductUiState.Success("")
+                    val allSupplyItems = response.body()!!
+                    val filteredSupplyItems = allSupplyItems.filter { it.branchId == branchId }
+                    _formState.value = _formState.value.copy(availableSupplyItems = filteredSupplyItems)
+                    if (productId != null) {
+                        loadProductForEdit(productId!!)
+                    } else {
+                        _uiState.value = AddEditProductUiState.ReadyForInput
+                    }
                 } else {
                     _uiState.value = AddEditProductUiState.Error("Error al cargar los insumos disponibles")
                 }
@@ -179,36 +215,46 @@ class AddEditProductViewModel : ViewModel() {
         }
     }
 
-    private fun loadProductForEdit(productId: Long) {
+    private fun loadProductForEdit(id: Long) {
         _uiState.value = AddEditProductUiState.Loading
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.productApi.getProductById(productId)
+                val response = RetrofitClient.productApi.getProductById(
+                    productId = id
+                )
                 if (response.isSuccessful && response.body() != null) {
                     val product = response.body()!!
-                    val components = product.components.map { component ->
-                        // Buscar el item correspondiente
-                        val item = _formState.value.availableItems.find { it.id == component.itemId }
-                        ProductComponentForm(
-                            itemId = component.itemId,
-                            itemName = item?.nombre ?: "Item no encontrado",
-                            unitMeasure = item?.unidadMedida ?: UnitMeasureType.GRAMOS,
-                            quantity = component.quantity
+                    if (product.branchId != branchId) {
+                        _uiState.value = AddEditProductUiState.Error("El producto no pertenece a la sede seleccionada.")
+                        return@launch
+                    }
+
+                    val availableSupplyItems = _formState.value.availableSupplyItems
+
+                    val ingredients = product.ingredients.map { ingredient ->
+                        // Intenta usar el nombre y la unidad del ingrediente directamente de la respuesta del producto.
+                        // Si son nulos, busca en la lista de insumos disponibles.
+                        val supplyItemName = ingredient.name ?: availableSupplyItems.find { it.id == ingredient.supplyItemId }?.name ?: "Nombre de insumo no disponible"
+                        val unit = ingredient.unit ?: availableSupplyItems.find { it.id == ingredient.supplyItemId }?.unit ?: "unidad"
+
+                        ProductIngredientForm(
+                            supplyItemId = ingredient.supplyItemId,
+                            supplyItemName = supplyItemName,
+                            unit = unit,
+                            quantity = ingredient.quantity.toString()
                         )
                     }
-                    
-                    _formState.value = ProductFormState(
+
+                    _formState.value = _formState.value.copy(
                         name = product.name,
-                        category = product.category,
-                        portions = product.portions,
-                        steps = product.steps,
-                        selectedComponents = components,
-                        availableItems = _formState.value.availableItems
+                        costPrice = product.costPrice.toString(),
+                        profitMargin = product.profitMargin.toString(),
+                        selectedIngredients = ingredients
                     )
-                    
+
                     _uiState.value = AddEditProductUiState.Editing(product)
                 } else {
-                    _uiState.value = AddEditProductUiState.Error("Error al cargar el producto")
+                    _uiState.value = AddEditProductUiState.Error("Error al cargar el producto para edición.")
                 }
             } catch (e: Exception) {
                 _uiState.value = AddEditProductUiState.Error("Error de conexión: ${e.message}")
@@ -216,11 +262,31 @@ class AddEditProductViewModel : ViewModel() {
         }
     }
 
-    private fun isFormValid(): Boolean {
+    private fun isFormValid(costPrice: Double?, profitMargin: Double?): Boolean {
         val formData = _formState.value
-        return formData.name.isNotBlank() && 
-               formData.category.isNotBlank() && 
-               formData.portions > 0 &&
-               formData.selectedComponents.isNotEmpty()
+        return formData.name.isNotBlank() &&
+                costPrice != null && costPrice >= 0 &&
+                profitMargin != null && profitMargin >= 0 &&
+                formData.selectedIngredients.all { it.quantity.toDoubleOrNull() != null && it.quantity.toDouble() > 0 } &&
+                formData.selectedIngredients.isNotEmpty()
+    }
+
+    companion object {
+        fun Factory(portfolioId: String, selectedSedeId: String, productId: Long?): androidx.lifecycle.ViewModelProvider.Factory =
+            object : androidx.lifecycle.ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    if (modelClass.isAssignableFrom(AddEditProductViewModel::class.java)) {
+                        return AddEditProductViewModel(
+                            savedStateHandle = SavedStateHandle().apply {
+                                set("portfolioId", portfolioId)
+                                set("selectedSedeId", selectedSedeId)
+                                set("productId", productId?.toString())
+                            }
+                        ) as T
+                    }
+                    throw IllegalArgumentException("Unknown ViewModel class")
+                }
+            }
     }
 }

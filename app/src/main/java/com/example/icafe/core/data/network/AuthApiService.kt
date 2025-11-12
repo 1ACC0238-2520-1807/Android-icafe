@@ -10,5 +10,5 @@ interface AuthApiService {
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
     @POST("/api/v1/authentication/sign-up")
-    suspend fun register(@Body request: RegisterRequest): Response<Unit> // Suponemos que no devuelve cuerpo
+    suspend fun register(@Body request: RegisterRequest): Response<Unit>
 }
