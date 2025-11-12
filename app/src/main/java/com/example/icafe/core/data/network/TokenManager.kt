@@ -1,40 +1,36 @@
 package com.example.icafe.core.data.network
 
 import android.content.Context
-import android.util.Log
+// import android.util.Log // Se puede eliminar si no se usa en ninguna otra parte del archivo
 
-// Necesitarás una forma de inicializar el contexto de la aplicación.
-// Un enfoque común es pasarlo una vez al iniciar la app.
 object TokenManager {
     private const val PREFS_NAME = "icafe_prefs"
     private const val TOKEN_KEY = "auth_token"
 
-    private var appContext: Context? = null // Se necesita para SharedPreferences
-    private var tokenInMemory: String? = null // Cache in memory
+    private var appContext: Context? = null
+    private var tokenInMemory: String? = null
 
     fun initialize(context: Context) {
         appContext = context.applicationContext
-        // Carga el token al iniciar si ya estaba guardado
         tokenInMemory = getSharedPreferences()?.getString(TOKEN_KEY, null)
-        Log.d("TokenManager", "Inicializado. Token en memoria: ${tokenInMemory?.take(10)}...")
+        // Log.d("TokenManager", "Inicializado. Token en memoria: ${tokenInMemory?.take(10)}...") // Comentado
     }
 
     fun saveToken(newToken: String) {
         tokenInMemory = newToken
         appContext?.let {
             getSharedPreferences(it)?.edit()?.putString(TOKEN_KEY, newToken)?.apply()
-            Log.d("TokenManager", "Token guardado en SharedPreferences: $newToken")
-        } ?: Log.e("TokenManager", "Contexto no inicializado, no se pudo guardar el token en SharedPreferences.")
+            // Log.d("TokenManager", "Token guardado en SharedPreferences: $newToken") // Comentado
+        } // ?: Log.e("TokenManager", "Contexto no inicializado, no se pudo guardar el token en SharedPreferences.") // Comentado
     }
 
     fun getToken(): String? {
-        // Siempre intenta recuperar de la memoria primero, luego de SharedPreferences si es null
         if (tokenInMemory == null) {
             tokenInMemory = getSharedPreferences()?.getString(TOKEN_KEY, null)
-            Log.d("TokenManager", "Token recuperado de SharedPreferences (por primera vez o después de pérdida): $tokenInMemory")
-        } else {
-            Log.d("TokenManager", "Token recuperado de memoria: $tokenInMemory")
-        }
+            // Log.d("TokenManager", "Token recuperado de SharedPreferences (por primera vez o después de pérdida): ${tokenInMemory?.take(10)}...") // Comentado
+        } // else {
+        // Log.d("TokenManager", "Token recuperado de memoria: ${tokenInMemory?.take(10)}...") // Comentado
+        // }
         return tokenInMemory
     }
 
@@ -42,8 +38,8 @@ object TokenManager {
         tokenInMemory = null
         appContext?.let {
             getSharedPreferences(it)?.edit()?.remove(TOKEN_KEY)?.apply()
-            Log.d("TokenManager", "Token limpiado de SharedPreferences y memoria.")
-        } ?: Log.e("TokenManager", "Contexto no inicializado, no se pudo limpiar el token en SharedPreferences.")
+            // Log.d("TokenManager", "Token limpiado de SharedPreferences y memoria.") // Comentado
+        } // ?: Log.e("TokenManager", "Contexto no inicializado, no se pudo limpiar el token en SharedPreferences.") // Comentado
     }
 
     private fun getSharedPreferences(context: Context? = appContext) =

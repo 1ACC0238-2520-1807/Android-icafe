@@ -12,8 +12,8 @@ enum class ProductStatus {
 // === NUEVO: ProductIngredientResource (refleja la estructura ProductIngredient del backend) ===
 data class ProductIngredientResource(
     val supplyItemId: Long, // ID del insumo
-    val name: String, // Nombre del insumo (de la respuesta del backend)
-    val unit: String, // Unidad del SupplyItem (String)
+    val name: String?, // Nombre del insumo (de la respuesta del backend) - ¡Cambiado a nullable!
+    val unit: String?, // Unidad del SupplyItem (String) - ¡Cambiado a nullable!
     val quantity: Double // Cantidad requerida para este producto
 )
 

@@ -94,15 +94,6 @@ fun InventoryLandingScreen(navController: NavController, portfolioId: String, se
                 }
             )
 
-            InventoryLandingButton(
-                text = "Ver Movimientos de Inventario",
-                icon = { Icon(Icons.Default.ListAlt, contentDescription = null, tint = BrownDark) },
-                backgroundColor = Peach,
-                onClick = {
-                    Log.d("InventoryLandingScreen", "Navegando a InventoryMovements con portfolioId='$portfolioId', selectedSedeId='$selectedSedeId'") // LOG AÑADIDO
-                    navController.navigate(Route.InventoryMovements.createRoute(portfolioId, selectedSedeId))
-                }
-            )
         }
     }
 }

@@ -24,9 +24,14 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.icafe.features.contacts.presentation.employee.StyledTextField
-import com.example.icafe.features.home.presentation.scaffold.AppScaffold // Importación necesaria
+import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.features.inventory.data.network.SupplyItemResource
 import com.example.icafe.ui.theme.OffWhiteBackground
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.example.icafe.ui.theme.OliveGreen
+import com.example.icafe.ui.theme.BrownMedium
+import androidx.compose.ui.platform.LocalLayoutDirection
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,20 +53,28 @@ fun AddEditProductScreen(
     }
 
 
-    AppScaffold( // Línea 56
+    AppScaffold(
         title = if (productId == null) "Agregar Producto" else "Editar Producto",
         navController = navController,
         portfolioId = portfolioId,
         selectedSedeId = selectedSedeId
-    ) { // *** CAMBIO CRÍTICO: Eliminar el parámetro de la lambda de AppScaffold ***
-        // AppScaffold probablemente no pasa el PaddingValues a su content.
-        // El padding lo manejaremos directamente en la columna si es necesario, o AppScaffold ya lo maneja.
+    ) { innerPadding -> // Este es el padding del AppScaffold (TopBar y BottomBar)
+        val scrollState = rememberScrollState() // Crear un estado de desplazamiento
+        val layoutDirection = LocalLayoutDirection.current // Obtener la dirección del layout
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(OffWhiteBackground)
-                // .padding(innerPadding) // ELIMINAR ESTA LÍNEA si AppScaffold ya maneja el padding global
-                .padding(horizontal = 16.dp, vertical = 16.dp) // Añadir padding manual si es necesario
+                // Aplicar padding combinado para controlar mejor el espacio superior y el inferior
+                .padding(
+                    top = 16.dp, // Reducir el padding superior a un valor fijo más pequeño
+                    start = innerPadding.calculateStartPadding(layoutDirection) + 16.dp, // Añadir padding horizontal
+                    end = innerPadding.calculateEndPadding(layoutDirection) + 16.dp,   // Añadir padding horizontal
+                    bottom = innerPadding.calculateBottomPadding() // Mantener el padding inferior del Scaffold
+                )
+                .verticalScroll(scrollState), // Habilitar el desplazamiento vertical
+            verticalArrangement = Arrangement.spacedBy(16.dp) // Espaciado entre elementos directos de esta Column
         ) {
             when (uiState) {
                 is AddEditProductUiState.Loading, is AddEditProductUiState.LoadingSupplyItems -> {
@@ -70,10 +83,8 @@ fun AddEditProductScreen(
                 is AddEditProductUiState.Success -> { /* El LaunchedEffect de arriba maneja la navegación */ }
                 is AddEditProductUiState.ReadyForInput, is AddEditProductUiState.Editing, is AddEditProductUiState.Error -> {
                     Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp) // Espaciado entre elementos de esta Column interna
                     ) {
                         StyledTextField(
                             label = "Nombre del Producto",
@@ -123,17 +134,20 @@ fun AddEditProductScreen(
                             availableSupplyItems = formState.availableSupplyItems,
                             onAddIngredient = { supplyItem, quantity -> viewModel.addOrUpdateIngredient(supplyItem, quantity) }
                         )
-                    }
+                        // ELIMINADO: Spacer(modifier = Modifier.height(16.dp)) // Este Spacer redundante se quita
+                    } // Fin de la Column interna
 
+                    // El Button "Guardar/Actualizar Producto" ahora se beneficia del verticalArrangement de la Column padre
                     Button(
                         onClick = { viewModel.saveProduct() },
                         modifier = Modifier.fillMaxWidth().height(50.dp),
-                        enabled = uiState !is AddEditProductUiState.Loading
+                        enabled = uiState !is AddEditProductUiState.Loading,
+                        colors = ButtonDefaults.buttonColors(containerColor = OliveGreen) // Cambiar color del botón
                     ) {
                         if (uiState is AddEditProductUiState.Loading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                         } else {
-                            Text(if (productId == null) "Guardar Producto" else "Actualizar Producto")
+                            Text(if (productId == null) "Guardar Producto" else "Actualizar Producto", color = Color.White)
                         }
                     }
 
@@ -207,9 +221,10 @@ fun AddIngredientSection(
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = selectedSupplyItem != null && quantityText.toDoubleOrNull() != null && quantityText.toDouble() > 0
+            enabled = selectedSupplyItem != null && quantityText.toDoubleOrNull() != null && quantityText.toDouble() > 0,
+            colors = ButtonDefaults.buttonColors(containerColor = BrownMedium) // Cambiar color del botón
         ) {
-            Text("Añadir Ingrediente")
+            Text("Añadir Ingrediente", color = Color.White)
         }
     }
 }

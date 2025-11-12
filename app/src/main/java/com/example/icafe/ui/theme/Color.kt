@@ -18,3 +18,5 @@ val OliveGreen = Color(0xFF79745B) // Para botones principales como "Agregar" y 
 val Peach = Color(0xFFF5E0D8) // Para lighter card backgrounds, edit buttons
 val LightGrayBackground = Color(0xFFE0E0E0) // Para los campos de texto
 val OffWhiteBackground = Color(0xFFFFF8F5) // Fondo general de las pantallas
+
+val RedWarning = Color.Red

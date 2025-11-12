@@ -1,6 +1,7 @@
 package com.example.icafe.features.home.presentation.scaffold
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.PaddingValues // ¡IMPORTANTE: Añadir esta importación!
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,7 +37,7 @@ fun AppScaffold(
     navController: NavController,
     portfolioId: String?,
     selectedSedeId: String?, // New parameter for selected Sede ID
-    content: @Composable () -> Unit
+    content: @Composable (PaddingValues) -> Unit
 ) {
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     val isAuthScreen = currentRoute == Route.Login.route || currentRoute == Route.Register.route
@@ -52,22 +53,22 @@ fun AppScaffold(
         NavigationItem(
             label = "Contactos",
             icon = { Icon(Icons.Default.People, contentDescription = "Contactos") },
-            route = Route.ContactsLanding.createRoute(portfolioId ?: "0", selectedSedeId ?: "0") // MODIFIED: Point to new ContactsLanding
+            route = Route.ContactsLanding.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")
         ),
         NavigationItem(
-            label = "Alimentos", // Changed label from Cafe to Alimentos
-            icon = { Icon(Icons.Default.Fastfood, contentDescription = "Alimentos") }, // Changed icon
+            label = "Alimentos",
+            icon = { Icon(Icons.Default.Fastfood, contentDescription = "Alimentos") },
             route = Route.InventoryLanding.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")
         ),
         NavigationItem(
             label = "Finanzas",
-            icon = { Icon(Icons.Default.AttachMoney, contentDescription = "Finanzas") }, // Changed icon
-            route = Route.FinanceLanding.createRoute(portfolioId ?: "0", selectedSedeId ?: "0") // MODIFICADO: Ahora navega a FinanceLanding
+            icon = { Icon(Icons.Default.AttachMoney, contentDescription = "Finanzas") },
+            route = Route.FinanceLanding.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")
         ),
         NavigationItem(
-            label = "Movimientos", // Changed label from Grafico to Movimientos
-            icon = { Icon(Icons.Default.Moving, contentDescription = "Movimientos") }, // Changed icon
-            route = Route.InventoryMovements.createRoute(portfolioId ?: "0", selectedSedeId ?: "0") // MODIFIED: Pass portfolioId
+            label = "Movimientos",
+            icon = { Icon(Icons.Default.Moving, contentDescription = "Movimientos") },
+            route = Route.InventoryMovements.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")
         )
     )
 
@@ -77,8 +78,8 @@ fun AppScaffold(
         NavigationItem(label = "Proveedores", icon = { Icon(Icons.Default.LocalShipping, contentDescription = null) }, route = Route.ProviderList.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
         NavigationItem(label = "Insumos", icon = { Icon(Icons.Default.ShoppingBasket, contentDescription = null) }, route = Route.ItemList.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
         NavigationItem(label = "Productos", icon = { Icon(Icons.Default.LocalCafe, contentDescription = null) }, route = Route.ProductList.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
-        NavigationItem(label = "Registrar Ventas", icon = { Icon(Icons.Default.MonetizationOn, contentDescription = null) }, route = Route.AddSale.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")), // MODIFICADO
-        NavigationItem(label = "Registrar Compras", icon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) }, route = Route.AddPurchaseOrder.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")), // MODIFICADO
+        NavigationItem(label = "Registrar Ventas", icon = { Icon(Icons.Default.MonetizationOn, contentDescription = null) }, route = Route.AddSale.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
+        NavigationItem(label = "Registrar Compras", icon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) }, route = Route.AddPurchaseOrder.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
         NavigationItem(label = "Movimientos Inventario", icon = { Icon(Icons.Default.Moving, contentDescription = null) }, route = Route.InventoryMovements.createRoute(portfolioId ?: "0", selectedSedeId ?: "0")),
         NavigationItem(label = "Cerrar Sesión", icon = { Icon(Icons.Default.Logout, contentDescription = null) }, route = Route.Login.route)
     )
@@ -90,7 +91,7 @@ fun AppScaffold(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = !isAuthScreen && !isSedeScreen, // Disable gestures for auth and sede selection screens
+        gesturesEnabled = !isAuthScreen && !isSedeScreen,
         drawerContent = {
             ModalDrawerSheet {
                 Text(
@@ -139,7 +140,7 @@ fun AppScaffold(
                             IconButton(onClick = { navController.navigateUp() }) {
                                 Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
                             }
-                        } else if (!isAuthScreen && !isSedeScreen) { // Show menu icon only if not auth/sede screen
+                        } else if (!isAuthScreen && !isSedeScreen) {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                 Icon(Icons.Default.Menu, contentDescription = "Menu")
                             }
@@ -155,36 +156,35 @@ fun AppScaffold(
                 )
             },
             bottomBar = {
-                if (!isAuthScreen && !isSedeScreen) { // Only show bottom bar on main content screens
-                    NavigationBar(containerColor = BrownMedium) { // Set background color
+                if (!isAuthScreen && !isSedeScreen) {
+                    NavigationBar(containerColor = BrownMedium) {
                         navigationItems.forEach { item ->
                             val selected = currentRoute == item.route.substringBeforeLast('/') ||
                                     currentRoute?.startsWith(item.route.substringBeforeLast('/')) == true
                             NavigationBarItem(
                                 selected = selected,
                                 onClick = { navController.navigate(item.route) {
-                                    // Avoid adding multiple copies of the same destination to the back stack
                                     launchSingleTop = true
-                                    // Restore state when reselecting a previously selected item
                                     restoreState = true
                                 } },
                                 icon = item.icon,
                                 label = { Text(item.label) },
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = OliveGreen, // Selected icon color
-                                    unselectedIconColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f), // Unselected icon color
-                                    selectedTextColor = OliveGreen, // Selected text color
-                                    unselectedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f), // Unselected text color
-                                    indicatorColor = BrownMedium // Indicator color
+                                    selectedIconColor = OliveGreen,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
+                                    selectedTextColor = OliveGreen,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f),
+                                    indicatorColor = BrownMedium
                                 )
                             )
                         }
                     }
                 }
             }
-        ) { padding ->
-            Surface(modifier = Modifier.padding(padding)) {
-                content()
+        ) { paddingValues -> // ¡¡¡CAMBIO CLAVE AQUÍ!!! El Scaffold de Material3 te da los paddingValues
+            // Superficie que aplica el padding proporcionado por el Scaffold
+            Surface(modifier = Modifier.padding(paddingValues)) {
+                content(paddingValues) // ¡¡¡CAMBIO CLAVE AQUÍ!!! Pasa los paddingValues a la lambda de contenido
             }
         }
     }

@@ -12,8 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.icafe.features.contacts.presentation.employee.StyledTextField
@@ -22,6 +26,8 @@ import com.example.icafe.features.inventory.data.network.UnitMeasureType // Ahor
 import com.example.icafe.ui.theme.OffWhiteBackground
 import kotlinx.coroutines.launch
 import com.example.icafe.features.contacts.data.network.ProviderResource
+import com.example.icafe.ui.theme.BrownMedium
+import com.example.icafe.ui.theme.OliveGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,22 +57,45 @@ fun AddEditItemScreen(navController: NavController, portfolioId: String, selecte
         }
     }
 
-    AppScaffold(title = title, navController = navController, portfolioId = portfolioId, selectedSedeId = selectedSedeId) {
+    AppScaffold(title = title, navController = navController, portfolioId = portfolioId, selectedSedeId = selectedSedeId) { scaffoldInnerPadding -> // Recibe el padding del AppScaffold
         Scaffold(
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-        ) { padding ->
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            // ELIMINADO: modifier = Modifier.padding(scaffoldInnerPadding)
+            // La Surface del AppScaffold ya maneja el padding de las barras superior e inferior.
+            // Si se aplica de nuevo aquí, causa doble padding y los rectángulos blancos.
+            modifier = Modifier.fillMaxSize() // Este Scaffold debe llenar el espacio que le dejó AppScaffold
+        ) { innerScaffoldContentPadding -> // Este padding es para elementos *dentro* de este Scaffold, como un Snackbar.
             if (viewModel.isLoading && isEditMode && viewModel.supplyItem == null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             } else {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(OffWhiteBackground)
-                        .padding(padding)
-                        .padding(16.dp)
+                        .fillMaxSize() // Ocupa todo el espacio disponible dentro de este Scaffold
+                        .background(OffWhiteBackground) // Aplica el fondo a toda esta Column
+                        .padding(innerScaffoldContentPadding) // Aplica el padding del Scaffold interno (para snackbars, etc.)
+                        .padding(horizontal = 16.dp) // Añade un padding horizontal para el contenido del formulario
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // Tarjeta de título similar a la pantalla de compras
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = OliveGreen)
+                    ) {
+                        Text(
+                            text = if (isEditMode) "Editar Insumo" else "Nuevo Insumo",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            textAlign = TextAlign.Center,
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp)) // Espaciador después de la tarjeta de título
+
                     StyledTextField(label = "Nombre del Insumo", value = viewModel.name, onValueChange = { viewModel.name = it })
 
                     var expandedUnit by remember { mutableStateOf(false) }
@@ -139,9 +168,9 @@ fun AddEditItemScreen(navController: NavController, portfolioId: String, selecte
 
                     Text("Fecha de Vencimiento (YYYY-MM-DD):", style = MaterialTheme.typography.labelLarge)
                     OutlinedTextField(
-                        value = viewModel.dateInputText, // NEW: Use dateInputText from ViewModel
+                        value = viewModel.dateInputText,
                         onValueChange = { newDateString ->
-                            viewModel.dateInputText = newDateString // NEW: Update dateInputText directly
+                            viewModel.dateInputText = newDateString
                         },
                         label = { Text("Fecha de Vencimiento") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
@@ -149,19 +178,27 @@ fun AddEditItemScreen(navController: NavController, portfolioId: String, selecte
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.weight(1f)) // Empuja el botón hacia abajo
 
                     Button(
                         onClick = { viewModel.saveItem() },
                         enabled = !viewModel.isLoading,
-                        modifier = Modifier.fillMaxWidth().height(50.dp)
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(16.dp), // Aplicar forma redondeada
+                        colors = ButtonDefaults.buttonColors( // Aplicar colores del tema
+                            containerColor = OliveGreen,
+                            contentColor = Color.White,
+                            disabledContainerColor = BrownMedium.copy(alpha = 0.5f),
+                            disabledContentColor = Color.White.copy(alpha = 0.7f)
+                        )
                     ) {
                         if (viewModel.isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White) // Color del progreso
                         } else {
-                            Text("Guardar")
+                            Text("Guardar", color = Color.White, fontSize = 18.sp) // Color y tamaño del texto
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp)) // Espacio al final
                 }
             }
         }

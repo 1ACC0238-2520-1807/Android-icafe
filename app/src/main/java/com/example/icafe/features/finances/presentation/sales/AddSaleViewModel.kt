@@ -20,7 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.lang.Exception // Asegúrate de importar esto
+import java.lang.Exception
+import android.util.Log // Import for logging
 
 // --- ViewModels y Estados de UI ---
 sealed class AddSaleUiState {
@@ -28,6 +29,7 @@ sealed class AddSaleUiState {
     object ReadyForInput : AddSaleUiState()
     data class Success(val message: String) : AddSaleUiState()
     data class Error(val message: String) : AddSaleUiState()
+    object Processing : AddSaleUiState() // Nuevo estado para indicar que una operación está en curso
 }
 
 // Clase de datos para representar un ítem de venta en el formulario
@@ -49,7 +51,7 @@ class AddSaleViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
     val events = _events.asSharedFlow()
 
     val branchId: Long = savedStateHandle.get<String>("selectedSedeId")?.toLongOrNull() ?: 1L
-    private val portfolioId: String = savedStateHandle.get<String>("portfolioId")!! // Asegúrate de que esto se pase correctamente
+    private val portfolioId: String = savedStateHandle.get<String>("portfolioId")!!
 
     var customerId by mutableStateOf("")
     var notes by mutableStateOf("")
@@ -63,6 +65,10 @@ class AddSaleViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
 
     val totalAmount: Double
         get() = _selectedSaleItems.sumOf { it.subtotal }
+
+    // Variable para prevenir envíos múltiples, observada por la UI
+    var isSubmitting by mutableStateOf(false)
+        private set
 
     init {
         loadAvailableProducts()
@@ -109,6 +115,12 @@ class AddSaleViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
 
     // Registra la venta y los movimientos de inventario asociados
     fun registerSale() {
+        // Bloquear si ya se está procesando
+        if (isSubmitting) {
+            Log.d("AddSaleVM", "Submission already in progress, ignoring duplicate call.")
+            return
+        }
+
         if (customerId.isBlank() || _selectedSaleItems.isEmpty()) {
             _uiState.value = AddSaleUiState.Error("El ID del cliente y al menos un producto son obligatorios.")
             return
@@ -122,9 +134,12 @@ class AddSaleViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
             )
         }
 
-        _uiState.value = AddSaleUiState.Loading
+        _uiState.value = AddSaleUiState.Processing // Establecer estado de procesamiento
+        isSubmitting = true // Activar bandera de envío
+
         viewModelScope.launch {
             try {
+                Log.d("AddSaleVM", "Attempting to create sale...")
                 val request = CreateSaleRequest(
                     customerId = customerId.toLongOrNull() ?: 0L,
                     branchId = branchId,
@@ -135,38 +150,49 @@ class AddSaleViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
 
                 if (response.isSuccessful && response.body() != null) {
                     val saleResource = response.body()!!
-                    // Registrar movimientos de inventario para cada producto vendido
+                    Log.d("AddSaleVM", "Sale created (ID: ${saleResource.id}). Now registering inventory movements for each product sold.")
+
                     for (saleItem in saleResource.items) {
-                        // Primero, obtener los detalles del producto para sus ingredientes
                         val productResponse = RetrofitClient.productApi.getProductById(saleItem.productId)
                         if (productResponse.isSuccessful && productResponse.body() != null) {
                             val product = productResponse.body()!!
+                            Log.d("AddSaleVM", "  Processing product '${product.name}' (ID: ${product.id}) for sale item (Qty: ${saleItem.quantity})...")
                             for (ingredient in product.ingredients) {
+                                Log.d("AddSaleVM", "    Registering SALIDA movement for ingredient '${ingredient.name}' (SupplyItemID: ${ingredient.supplyItemId}) - Quantity: ${ingredient.quantity * saleItem.quantity}")
                                 val transaction = CreateInventoryTransactionResource(
                                     supplyItemId = ingredient.supplyItemId,
                                     branchId = branchId,
-                                    type = TransactionType.SALIDA, // Es una salida de inventario
-                                    quantity = ingredient.quantity * saleItem.quantity, // Cantidad total del ingrediente consumido
+                                    type = TransactionType.SALIDA,
+                                    quantity = ingredient.quantity * saleItem.quantity,
                                     origin = "Venta de Producto '${product.name}' (ID: ${product.id})"
                                 )
-                                RetrofitClient.inventoryApi.registerMovement(transaction)
+                                // Es buena práctica verificar la respuesta de esta llamada a la API también.
+                                val movementResponse = RetrofitClient.inventoryApi.registerMovement(transaction)
+                                if (!movementResponse.isSuccessful) {
+                                    Log.e("AddSaleVM", "Failed to register inventory movement for ingredient ${ingredient.name}: ${movementResponse.code()} - ${movementResponse.errorBody()?.string()}")
+                                    // Opcionalmente, puedes establecer _uiState a error aquí y detener el procesamiento.
+                                    // Por ahora, solo se registra el error.
+                                }
                             }
+                        } else {
+                            Log.e("AddSaleVM", "Failed to fetch product details for product ID: ${saleItem.productId}. Sale item quantity: ${saleItem.quantity}")
                         }
                     }
                     _uiState.value = AddSaleUiState.Success("Venta registrada exitosamente. ID: ${saleResource.id}")
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Error al registrar venta."
-                    println("ERROR AL REGISTRAR VENTA: Código ${response.code()} - Mensaje: $errorBody") // Agregado para depuración
+                    Log.e("AddSaleVM", "Error registering sale: ${response.code()} - $errorBody")
                     _uiState.value = AddSaleUiState.Error("Error al registrar venta: ${response.code()} - $errorBody")
                 }
             } catch (e: Exception) {
-                println("ERROR DE CONEXIÓN AL REGISTRAR VENTA: ${e.message}") // Agregado para depuración
+                Log.e("AddSaleVM", "Connection error during sale registration: ${e.message}", e)
                 _uiState.value = AddSaleUiState.Error("Error de conexión: ${e.message}")
+            } finally {
+                isSubmitting = false // Asegurarse de que la bandera se restablezca siempre
             }
         }
     }
 
-    // Factory para crear AddSaleViewModel
     companion object {
         fun Factory(portfolioId: String, selectedSedeId: String): androidx.lifecycle.ViewModelProvider.Factory =
             object : androidx.lifecycle.ViewModelProvider.Factory {

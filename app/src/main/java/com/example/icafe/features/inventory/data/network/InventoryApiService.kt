@@ -10,7 +10,7 @@ interface InventoryApiService {
 
     // *** RESTAURADO: Espera InventoryTransactionResource de nuevo ***
     @POST("/api/v1/inventory/movements")
-    suspend fun registerMovement(@Body transactionData: CreateInventoryTransactionResource): Response<InventoryTransactionResource>
+    suspend fun registerMovement(@Body request: CreateInventoryTransactionResource): Response<Unit>
 
     // --- Endpoint para el stock actual (ProductStock) ---
     @GET("/api/v1/inventory/stock/{branchId}/{supplyItemId}")
@@ -18,4 +18,7 @@ interface InventoryApiService {
         @Path("branchId") branchId: Long,
         @Path("supplyItemId") supplyItemId: Long
     ): Response<CurrentStockResource>
+
+    @GET("/api/v1/inventory/movements/{branchId}")
+    suspend fun getAllStockMovementsByBranch(@Path("branchId") branchId: Long): Response<List<InventoryTransactionResource>>
 }

@@ -18,7 +18,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.lang.Exception // Asegúrate de importar esto
+import java.lang.Exception
+import android.util.Log // Import for logging
 
 // --- ViewModels y Estados de UI ---
 sealed class AddPurchaseOrderUiState {
@@ -26,6 +27,7 @@ sealed class AddPurchaseOrderUiState {
     object ReadyForInput : AddPurchaseOrderUiState()
     data class Success(val message: String) : AddPurchaseOrderUiState()
     data class Error(val message: String) : AddPurchaseOrderUiState()
+    object Processing : AddPurchaseOrderUiState() // Nuevo estado para indicar que una operación está en curso
 }
 
 class AddPurchaseOrderViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
@@ -39,8 +41,8 @@ class AddPurchaseOrderViewModel(savedStateHandle: SavedStateHandle) : ViewModel(
     var selectedSupplyItem by mutableStateOf<SupplyItemResource?>(null)
     var quantity by mutableStateOf("")
     var unitPrice by mutableStateOf("")
-    var purchaseDate by mutableStateOf(LocalDate.now()) // Por defecto, la fecha actual
-    var expirationDate by mutableStateOf<LocalDate?>(null) // Opcional
+    var purchaseDate by mutableStateOf(LocalDate.now())
+    var expirationDate by mutableStateOf<LocalDate?>(null)
     var notes by mutableStateOf("")
 
     private val _availableProviders = MutableStateFlow<List<ProviderResource>>(emptyList())
@@ -48,6 +50,10 @@ class AddPurchaseOrderViewModel(savedStateHandle: SavedStateHandle) : ViewModel(
 
     private val _availableSupplyItems = MutableStateFlow<List<SupplyItemResource>>(emptyList())
     val availableSupplyItems: StateFlow<List<SupplyItemResource>> = _availableSupplyItems.asStateFlow()
+
+    // Variable para prevenir envíos múltiples, observada por la UI
+    var isSubmitting by mutableStateOf(false)
+        private set
 
     init {
         loadInitialData()
@@ -67,7 +73,7 @@ class AddPurchaseOrderViewModel(savedStateHandle: SavedStateHandle) : ViewModel(
                 }
 
                 // Cargar insumos disponibles para la sede actual
-                val supplyItemsResponse = RetrofitClient.productApi.getSupplyItemsByBranch(branchId) // Usamos productApi para obtener los supply-items por rama
+                val supplyItemsResponse = RetrofitClient.productApi.getSupplyItemsByBranch(branchId)
                 if (supplyItemsResponse.isSuccessful && supplyItemsResponse.body() != null) {
                     _availableSupplyItems.value = supplyItemsResponse.body()!!
                 } else {
@@ -83,14 +89,23 @@ class AddPurchaseOrderViewModel(savedStateHandle: SavedStateHandle) : ViewModel(
 
     // Registra la orden de compra y el movimiento de inventario asociado
     fun registerPurchaseOrder() {
+        // Bloquear si ya se está procesando
+        if (isSubmitting) {
+            Log.d("AddPurchaseOrderVM", "Submission already in progress, ignoring duplicate call.")
+            return
+        }
+
         if (selectedProvider == null || selectedSupplyItem == null || quantity.isBlank() || unitPrice.isBlank()) {
             _uiState.value = AddPurchaseOrderUiState.Error("Todos los campos con * son obligatorios.")
             return
         }
 
-        _uiState.value = AddPurchaseOrderUiState.Loading
+        _uiState.value = AddPurchaseOrderUiState.Processing // Establecer estado de procesamiento
+        isSubmitting = true // Activar bandera de envío
+
         viewModelScope.launch {
             try {
+                Log.d("AddPurchaseOrderVM", "Attempting to create purchase order...")
                 val request = CreatePurchaseOrderRequest(
                     branchId = branchId,
                     providerId = selectedProvider!!.id,
@@ -98,13 +113,14 @@ class AddPurchaseOrderViewModel(savedStateHandle: SavedStateHandle) : ViewModel(
                     quantity = quantity.toDoubleOrNull() ?: 0.0,
                     unitPrice = unitPrice.toDoubleOrNull() ?: 0.0,
                     purchaseDate = purchaseDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
-                    expirationDate = expirationDate?.format(DateTimeFormatter.ISO_LOCAL_DATE), // Formatear solo si no es nulo
+                    expirationDate = expirationDate?.format(DateTimeFormatter.ISO_LOCAL_DATE),
                     notes = notes.ifBlank { null }
                 )
                 val response = RetrofitClient.purchaseOrdersApi.createPurchaseOrder(request)
 
                 if (response.isSuccessful && response.body() != null) {
                     val purchaseOrderResource = response.body()!!
+                    Log.d("AddPurchaseOrderVM", "Purchase order created (ID: ${purchaseOrderResource.id}), attempting to register inventory movement for supplyItemId: ${purchaseOrderResource.supplyItemId}")
                     // Registrar movimiento de inventario (ENTRADA)
                     val transaction = CreateInventoryTransactionResource(
                         supplyItemId = purchaseOrderResource.supplyItemId,
@@ -113,22 +129,31 @@ class AddPurchaseOrderViewModel(savedStateHandle: SavedStateHandle) : ViewModel(
                         quantity = purchaseOrderResource.quantity,
                         origin = "Compra de Insumo '${purchaseOrderResource.supplyItemName}' (Orden ID: ${purchaseOrderResource.id})"
                     )
-                    RetrofitClient.inventoryApi.registerMovement(transaction)
+                    val inventoryResponse = RetrofitClient.inventoryApi.registerMovement(transaction) // Se guarda la respuesta
 
-                    _uiState.value = AddPurchaseOrderUiState.Success("Orden de compra registrada exitosamente. ID: ${purchaseOrderResource.id}")
+                    if (inventoryResponse.isSuccessful) {
+                        Log.d("AddPurchaseOrderVM", "Inventory movement registration successful.")
+                        _uiState.value = AddPurchaseOrderUiState.Success("Orden de compra registrada exitosamente y stock actualizado. ID: ${purchaseOrderResource.id}")
+                    } else {
+                        val errorBody = inventoryResponse.errorBody()?.string() ?: "Error desconocido al registrar movimiento de inventario."
+                        Log.e("AddPurchaseOrderVM", "Error registering inventory movement: ${inventoryResponse.code()} - $errorBody")
+                        _uiState.value = AddPurchaseOrderUiState.Error("Error al registrar movimiento de inventario: ${inventoryResponse.code()} - $errorBody")
+                    }
+
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Error al registrar orden de compra."
-                    println("ERROR AL REGISTRAR COMPRA: Código ${response.code()} - Mensaje: $errorBody") // Agregado para depuración
+                    Log.e("AddPurchaseOrderVM", "Error registering purchase order: ${response.code()} - $errorBody")
                     _uiState.value = AddPurchaseOrderUiState.Error("Error al registrar orden de compra: ${response.code()} - $errorBody")
                 }
             } catch (e: Exception) {
-                println("ERROR DE CONEXIÓN AL REGISTRAR COMPRA: ${e.message}") // Agregado para depuración
+                Log.e("AddPurchaseOrderVM", "Connection error during purchase order registration: ${e.message}", e)
                 _uiState.value = AddPurchaseOrderUiState.Error("Error de conexión: ${e.message}")
+            } finally {
+                isSubmitting = false // Asegurarse de que la bandera se restablezca siempre
             }
         }
     }
 
-    // Factory para crear AddPurchaseOrderViewModel
     companion object {
         fun Factory(portfolioId: String, selectedSedeId: String): androidx.lifecycle.ViewModelProvider.Factory =
             object : androidx.lifecycle.ViewModelProvider.Factory {

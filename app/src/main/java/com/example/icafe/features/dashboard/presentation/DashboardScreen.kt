@@ -9,6 +9,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,67 +21,176 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.icafe.core.Route
 import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.ui.theme.*
+import androidx.compose.ui.platform.LocalLayoutDirection // Importar LocalLayoutDirection para calculateStartPadding/calculateEndPadding
 
 @Composable
 fun DashboardScreen(navController: NavController, portfolioId: String, selectedSedeId: String) {
+    val viewModel: DashboardViewModel = viewModel(
+        factory = DashboardViewModel.Factory(portfolioId, selectedSedeId)
+    )
+    val uiState by viewModel.uiState.collectAsState()
+
     AppScaffold(
-        title = "Dashboard",
+        title = "Inicio",
         navController = navController,
         portfolioId = portfolioId,
         selectedSedeId = selectedSedeId
-    ) {
+    ) { scaffoldInnerPadding ->
+        val layoutDirection = LocalLayoutDirection.current // Obtener la dirección del layout
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(OffWhiteBackground)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                // Aplicar el padding del AppScaffold, pero ajustando explícitamente el padding superior
+                .padding(
+                    top = 16.dp, // Reducir el padding superior a un valor fijo más pequeño
+                    start = scaffoldInnerPadding.calculateStartPadding(layoutDirection) + 16.dp, // Añadir padding horizontal
+                    end = scaffoldInnerPadding.calculateEndPadding(layoutDirection) + 16.dp,   // Añadir padding horizontal
+                    bottom = scaffoldInnerPadding.calculateBottomPadding() // Mantener el padding inferior del Scaffold
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            InfoSedeCard(sedeName = "Sede $selectedSedeId") // Display selected sede name
+            when (val state = uiState) {
+                is DashboardUiState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 64.dp), color = OliveGreen)
+                    Text("Cargando datos...", modifier = Modifier.align(Alignment.CenterHorizontally), color = Color.Gray)
+                }
+                is DashboardUiState.Error -> {
+                    Text(
+                        text = state.message,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(top = 64.dp)
+                    )
+                    Button(onClick = { viewModel.loadDashboardData() }, colors = ButtonDefaults.buttonColors(containerColor = OliveGreen)) {
+                        Text("Reintentar", color = Color.White)
+                    }
+                }
+                is DashboardUiState.Success -> {
+                    InfoSedeCard(sedeName = state.sedeName)
 
-            // Placeholder for charts/metrics
-            ChartPlaceholderCard(title = "Productos más vendidos de la semana")
+                    SalesStatsCard(
+                        totalSalesAmount = state.metrics.totalSalesAmount,
+                        totalSalesCount = state.metrics.totalSalesCount,
+                        averageSaleAmount = state.metrics.averageSaleAmount
+                    )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                MetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Días de Inventario",
-                    value = "30", // Placeholder
-                    unit = "días"
-                )
-                MetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Días de Expiración",
-                    value = "15", // Placeholder
-                    unit = "días"
-                )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        MetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Empleados",
+                            value = state.metrics.totalEmployees.toString(),
+                            unit = "personas",
+                            icon = rememberVectorPainter(Icons.Default.People)
+                        )
+                        MetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Proveedores",
+                            value = state.metrics.totalProviders.toString(),
+                            unit = "empresas",
+                            icon = rememberVectorPainter(Icons.Default.LocalShipping)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        MetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Insumos",
+                            value = state.metrics.totalSupplyItems.toString(),
+                            unit = "tipos",
+                            icon = rememberVectorPainter(Icons.Default.ShoppingBasket)
+                        )
+                        MetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Productos",
+                            value = state.metrics.totalProducts.toString(),
+                            unit = "tipos",
+                            icon = rememberVectorPainter(Icons.Default.LocalCafe)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        MetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Ventas Totales",
+                            value = String.format("%.2f", state.metrics.totalSalesAmount),
+                            unit = "S/.",
+                            icon = rememberVectorPainter(Icons.Default.MonetizationOn)
+                        )
+                        MetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Compras Totales",
+                            value = String.format("%.2f", state.metrics.totalPurchasesAmount),
+                            unit = "S/.",
+                            icon = rememberVectorPainter(Icons.Default.ShoppingCart)
+                        )
+                    }
+
+                }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                MetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Días de Homogeneización",
-                    value = "20", // Placeholder
-                    unit = "días"
-                )
-                MetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Días de Vencimiento",
-                    value = "25", // Placeholder
-                    unit = "días"
-                )
-            }
-
-            // REMOVED ALL ACTION BUTTONS FROM HERE
-            // Their functionalities are accessible via the bottom navigation bar and the side drawer.
-
         }
+    }
+}
+
+// === NUEVO COMPOSABLE: SalesStatsCard ===
+@Composable
+fun SalesStatsCard(totalSalesAmount: Double, totalSalesCount: Int, averageSaleAmount: Double) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Peach)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Resumen de Ventas",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = BrownDark
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Divider(color = BrownDark.copy(alpha = 0.2f), thickness = 1.dp, modifier = Modifier.fillMaxWidth(0.8f))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SalesStatItem(title = "Total Vendido", value = String.format("S/. %.2f", totalSalesAmount), color = OliveGreen)
+                SalesStatItem(title = "Nº Ventas", value = totalSalesCount.toString(), color = BrownMedium)
+                SalesStatItem(title = "Promedio Venta", value = String.format("S/. %.2f", averageSaleAmount), color = BrownDark)
+            }
+        }
+    }
+}
+
+@Composable
+fun SalesStatItem(title: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = title, fontSize = 14.sp, color = BrownDark)
+        Text(text = value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = color)
     }
 }
 
@@ -99,7 +210,7 @@ fun InfoSedeCard(sedeName: String) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Store, // Changed to store icon
+                    imageVector = Icons.Default.Store,
                     contentDescription = "Sede Icon",
                     modifier = Modifier
                         .size(48.dp)
@@ -116,11 +227,6 @@ fun InfoSedeCard(sedeName: String) {
         }
     }
 }
-
-// DashboardActionCard and DashboardLargeButton are no longer used in DashboardScreen.
-// You can remove their definitions if they are not used elsewhere,
-// or keep them if you plan to reuse them in other parts of your app.
-// For now, I'm keeping them as they are utility components.
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,42 +289,7 @@ fun DashboardLargeButton(
 }
 
 @Composable
-fun ChartPlaceholderCard(title: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Peach)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = BrownDark
-            )
-            // Placeholder for a bar chart
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .background(LightGrayBackground, RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Gráfico aquí", color = Color.Gray)
-            }
-        }
-    }
-}
-
-@Composable
-fun MetricCard(modifier: Modifier = Modifier, title: String, value: String, unit: String) {
+fun MetricCard(modifier: Modifier = Modifier, title: String, value: String, unit: String, icon: Painter? = null) {
     Card(
         modifier = modifier.height(120.dp),
         shape = RoundedCornerShape(16.dp),
@@ -231,6 +302,15 @@ fun MetricCard(modifier: Modifier = Modifier, title: String, value: String, unit
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            icon?.let {
+                Icon(
+                    painter = it,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
             Text(
                 text = title,
                 color = Color.White.copy(alpha = 0.8f),
@@ -241,7 +321,7 @@ fun MetricCard(modifier: Modifier = Modifier, title: String, value: String, unit
             Text(
                 text = value,
                 color = Color.White,
-                fontSize = 32.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(

@@ -10,7 +10,10 @@ import com.example.icafe.features.products.data.network.ProductApiService
 import com.example.icafe.core.data.network.BranchApiService
 import com.example.icafe.features.finances.data.network.SalesApiService
 import com.example.icafe.features.finances.data.network.PurchaseOrdersApiService
-import com.example.icafe.core.data.network.AuthApiService // Asegúrate de esta importación
+import com.example.icafe.core.data.network.AuthApiService
+
+import com.example.icafe.core.data.network.LocalDateAdapter // Asumo que tienes un adaptador para LocalDate/LocalDateTime
+import com.example.icafe.core.data.network.LocalDateTimeAdapter // Asumo que tienes un adaptador para LocalDate/LocalDateTime
 
 import com.google.gson.GsonBuilder
 import java.util.concurrent.TimeUnit
@@ -18,15 +21,16 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
     private const val BASE_URL = "http://upc-icafebackend-3sger0-aa823d-31-97-13-234.traefik.me/"
 
+    // Nivel de logging cambiado a NONE para eliminar logs de OkHttp
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = HttpLoggingInterceptor.Level.NONE // Cambiado de .BODY a .NONE
     }
 
     private val gson = GsonBuilder()
         .create()
 
     private val httpClient = OkHttpClient.Builder()
-        .addInterceptor(AuthInterceptor()) // Aquí es donde se usa tu AuthInterceptor
+        .addInterceptor(AuthInterceptor())
         .addInterceptor(loggingInterceptor)
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
@@ -66,4 +70,5 @@ object RetrofitClient {
     val purchaseOrdersApi: PurchaseOrdersApiService by lazy {
         retrofit.create(PurchaseOrdersApiService::class.java)
     }
+
 }

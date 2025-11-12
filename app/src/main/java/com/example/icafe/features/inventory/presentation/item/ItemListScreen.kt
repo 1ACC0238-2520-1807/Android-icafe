@@ -1,6 +1,7 @@
 package com.example.icafe.features.inventory.presentation.item
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,35 +19,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.icafe.core.Route
-import com.example.icafe.features.inventory.data.network.SupplyItemResource
 import com.example.icafe.features.inventory.data.network.SupplyItemWithCurrentStock
 import com.example.icafe.ui.theme.LightGrayBackground
 import com.example.icafe.ui.theme.OffWhiteBackground
+import com.example.icafe.ui.theme.OliveGreen
+import com.example.icafe.ui.theme.BrownMedium
 
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.compose.ui.platform.LocalLifecycleOwner
-
 import com.example.icafe.features.home.presentation.scaffold.AppScaffold
+import androidx.compose.ui.platform.LocalLayoutDirection
 
-// *** ELIMINAR ESTAS DEFINICIONES DE ESTE ARCHIVO:
-// sealed class ItemListUiState {
-//     object Loading : ItemListUiState()
-//     data class Success(val items: List<SupplyItemWithCurrentStock>) : ItemListUiState()
-//     data class Error(val message: String) : ItemListUiState()
-// }
-//
-// class ItemListViewModel(savedStateHandle: SavedStateHandle) : ViewModel() { ... }
-// ***
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemListScreen(navController: NavController, portfolioId: String, selectedSedeId: String) {
-    // Aquí, simplemente usa el ViewModel, ya está importado
     val viewModel: ItemListViewModel = viewModel(
         factory = ItemListViewModel.ItemListViewModelFactory(portfolioId, selectedSedeId)
     )
@@ -57,7 +50,7 @@ fun ItemListScreen(navController: NavController, portfolioId: String, selectedSe
         lifecycleOwner.lifecycle.addObserver(object : LifecycleEventObserver {
             override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
                 if (event == Lifecycle.Event.ON_RESUME) {
-                    viewModel.loadItems() // Reload items when the screen is resumed
+                    viewModel.loadItems() // Recargar elementos cuando la pantalla se reanuda
                 }
             }
         })
@@ -69,38 +62,141 @@ fun ItemListScreen(navController: NavController, portfolioId: String, selectedSe
         navController = navController,
         portfolioId = portfolioId,
         selectedSedeId = selectedSedeId
-    ) {
-        Scaffold(
-            floatingActionButton = {
-                FloatingActionButton(onClick = { navController.navigate(Route.AddItem.createRoute(portfolioId, selectedSedeId)) }) {
-                    Icon(Icons.Default.Add, contentDescription = "Agregar Insumo")
+    ) { scaffoldInnerPadding -> // Este es el padding del AppScaffold (TopBar y BottomBar)
+        val layoutDirection = LocalLayoutDirection.current // Obtener la dirección del layout
+
+        Box( // Usamos un Box para poder posicionar el FAB
+            modifier = Modifier
+                .fillMaxSize()
+                .background(OffWhiteBackground) // Fondo principal de la pantalla
+                // Aplicar padding combinado: horizontal estándar + superior personalizado, y padding inferior del scaffold
+                .padding(
+                    top = 16.dp, // Reducir el padding superior a un valor fijo más pequeño
+                    start = scaffoldInnerPadding.calculateStartPadding(layoutDirection) + 16.dp, // Añadir padding horizontal
+                    end = scaffoldInnerPadding.calculateEndPadding(layoutDirection) + 16.dp,   // Añadir padding horizontal
+                    bottom = scaffoldInnerPadding.calculateBottomPadding() // Mantener el padding inferior del Scaffold
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize(), // La columna llena el Box, que ya tiene el padding ajustado
+                horizontalAlignment = Alignment.CenterHorizontally,
+                // NO USAMOS verticalArrangement aquí para dejar el LazyColumn gestionar su propio espacio
+            ) {
+                // Encabezado de la lista (contenido fijo)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Card(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = BrownMedium)
+                    ) {
+                        Text(
+                            text = "Nombre",
+                            modifier = Modifier
+                                .padding(vertical = 12.dp)
+                                .fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
+
+                    Card(
+                        modifier = Modifier.weight(0.5f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = BrownMedium)
+                    ) {
+                        Text(
+                            text = "Cantidad",
+                            modifier = Modifier
+                                .padding(vertical = 12.dp)
+                                .fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
-            }
-        ) { padding ->
-            Column(modifier = Modifier.padding(padding).fillMaxSize().background(OffWhiteBackground)) {
-                when (val state = uiState) {
-                    is ItemListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                    is ItemListUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(state.message) }
-                    is ItemListUiState.Success -> {
-                        if (state.items.isEmpty()) {
-                            Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
-                                Text("No hay insumos registrados.\nPresiona '+' para agregar el primero.", textAlign = TextAlign.Center, style = MaterialTheme.typography.headlineSmall, color = Color.Gray)
-                            }
-                        } else {
-                            LazyColumn(
-                                contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                Spacer(modifier = Modifier.height(16.dp)) // Espaciador después del encabezado
+
+                // Área para la lista de insumos (LazyColumn) o mensajes de estado
+                Box(modifier = Modifier.weight(1f)) { // Este Box tomará el espacio restante
+                    when (val state = uiState) {
+                        is ItemListUiState.Loading -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize(),
+                                contentAlignment = Alignment.Center
                             ) {
-                                item {
-                                    Row(Modifier.fillMaxWidth()) {
-                                        Text("Nombre", Modifier.weight(2f), fontWeight = FontWeight.Bold)
-                                        Text("Cantidad", Modifier.weight(1f), fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
+                                CircularProgressIndicator(color = OliveGreen)
+                            }
+                        }
+                        is ItemListUiState.Error -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = state.message,
+                                        color = MaterialTheme.colorScheme.error,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                    Button(
+                                        onClick = { viewModel.loadItems() }, // Reintentar cargar insumos
+                                        colors = ButtonDefaults.buttonColors(containerColor = OliveGreen)
+                                    ) {
+                                        Text("Reintentar", color = Color.White)
                                     }
-                                    Divider(modifier = Modifier.padding(top = 8.dp))
                                 }
-                                items(state.items, key = { it.id }) { item ->
-                                    ItemRow(item = item) {
-                                        navController.navigate(Route.ItemDetail.createRoute(portfolioId, selectedSedeId, item.id))
+                            }
+                        }
+                        is ItemListUiState.Success -> {
+                            if (state.items.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "No hay insumos registrados.",
+                                            textAlign = TextAlign.Center,
+                                            fontSize = 16.sp,
+                                            color = Color.Gray,
+                                            modifier = Modifier.padding(bottom = 8.dp)
+                                        )
+                                        Text(
+                                            text = "Presiona el botón '+' para agregar el primero.",
+                                            textAlign = TextAlign.Center,
+                                            fontSize = 14.sp,
+                                            color = Color.Gray
+                                        )
+                                    }
+                                }
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(), // Permitir que LazyColumn llene todo el espacio disponible
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    items(state.items, key = { it.id }) { item ->
+                                        SupplyItemListItem(item = item) {
+                                            navController.navigate(Route.ItemDetail.createRoute(portfolioId, selectedSedeId, item.id))
+                                        }
                                     }
                                 }
                             }
@@ -108,30 +204,48 @@ fun ItemListScreen(navController: NavController, portfolioId: String, selectedSe
                     }
                 }
             }
+
+            // Floating Action Button movido aquí, posicionado manualmente dentro del Box
+            FloatingActionButton(
+                onClick = { navController.navigate(Route.AddItem.createRoute(portfolioId, selectedSedeId)) },
+                containerColor = OliveGreen, // Color del FAB
+                modifier = Modifier
+                    .align(Alignment.BottomEnd) // Alinear a la esquina inferior derecha del Box padre
+                    .padding(16.dp) // Añadir padding alrededor del FAB
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Agregar Insumo", tint = Color.White)
+            }
         }
     }
 }
 
+// Componente para cada elemento de la lista de insumos
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemRow(item: SupplyItemWithCurrentStock, onClick: () -> Unit) {
+fun SupplyItemListItem(item: SupplyItemWithCurrentStock, onClick: () -> Unit) {
     Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = LightGrayBackground),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(item.name, Modifier.weight(2f), style = MaterialTheme.typography.bodyLarge)
+        ){
             Text(
-                text = "${item.stock} ${item.unit.lowercase()}",
-                Modifier.weight(1f),
-                textAlign = TextAlign.End,
-                color = MaterialTheme.colorScheme.onSurface
+                text = item.name,
+                modifier = Modifier.weight(1f), // Nombre del insumo toma más ancho
+                fontSize = 16.sp,
+                color = Color.Black
+            )
+
+            Text(
+                text = "${String.format("%.1f", item.stock)} ${item.unit.lowercase()}", // Cantidad formateada
+                modifier = Modifier.weight(0.5f), // Cantidad toma menos ancho
+                fontSize = 16.sp,
+                color = Color.Black,
+                textAlign = TextAlign.End // Alinea la cantidad a la derecha
             )
         }
     }

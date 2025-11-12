@@ -187,7 +187,7 @@ class ItemDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
                             type = TransactionType.ENTRADA,
                             quantity = stockValue,
                             origin = "Initial Stock",
-                            supplyItemId = newSupplyItem.id, // Usamos el ID devuelto por el backend
+                            supplyItemId = newSupplyItem.id, // Usa el ID del nuevo SupplyItem
                             branchId = branchId
                         )
                         Log.d("ItemDetailViewModel", "Enviando para crear InventoryMovement: ${Gson().toJson(movementRequest)}")
@@ -195,18 +195,17 @@ class ItemDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
 
                         val movementResponse = RetrofitClient.inventoryApi.registerMovement(movementRequest)
 
-                        if (movementResponse.isSuccessful && movementResponse.body() != null) {
-                            val newMovement = movementResponse.body()!!
-                            Log.d("ItemDetailViewModel", "Movimiento de inventario registrado exitosamente: ID ${newMovement.id}, para SupplyItem ID: ${newMovement.supplyItemId}")
+                        if (movementResponse.isSuccessful) { // Ya no esperamos un body, solo el éxito
+                            Log.d("ItemDetailViewModel", "Movimiento de inventario registrado exitosamente para SupplyItem ID: ${newSupplyItem.id}")
 
                             try {
-                                val currentStockResponse = RetrofitClient.inventoryApi.getCurrentStock(branchId, newMovement.supplyItemId)
+                                val currentStockResponse = RetrofitClient.inventoryApi.getCurrentStock(branchId, newSupplyItem.id) // Usa el ID del nuevo SupplyItem
                                 if (currentStockResponse.isSuccessful && currentStockResponse.body() != null) {
                                     val currentStock = currentStockResponse.body()!!
-                                    Log.d("ItemDetailViewModel", "Stock actual del insumo ID ${newMovement.supplyItemId} (Branch ${branchId}): ${currentStock.currentStock}")
+                                    Log.d("ItemDetailViewModel", "Stock actual del insumo ID ${newSupplyItem.id} (Branch ${branchId}): ${currentStock.currentStock}")
                                 } else {
                                     val errorBodyStock = currentStockResponse.errorBody()?.string() ?: "Error desconocido"
-                                    Log.e("ItemDetailViewModel", "Error al obtener stock actual para ID ${newMovement.supplyItemId}: ${currentStockResponse.code()} - $errorBodyStock")
+                                    Log.e("ItemDetailViewModel", "Error al obtener stock actual para ID ${newSupplyItem.id}: ${currentStockResponse.code()} - $errorBodyStock")
                                 }
                             } catch (e: Exception) {
                                 Log.e("ItemDetailViewModel", "Excepción de red al obtener stock actual: ${e.message}", e)

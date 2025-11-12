@@ -21,7 +21,7 @@ import java.lang.Exception
 sealed class AddEditProductUiState {
     object Loading : AddEditProductUiState()
     object LoadingSupplyItems : AddEditProductUiState()
-    object ReadyForInput : AddEditProductUiState() // *** NUEVO ESTADO ***
+    object ReadyForInput : AddEditProductUiState()
     data class Success(val message: String) : AddEditProductUiState()
     data class Error(val message: String) : AddEditProductUiState()
     data class Editing(val product: ProductResource) : AddEditProductUiState()
@@ -166,13 +166,27 @@ class AddEditProductViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
             newIngredients.none { newIng -> newIng.supplyItemId == backendIng.supplyItemId }
         }
         for (ingredient in ingredientsToRemove) {
+            // Asegúrate de usar el supplyItemId correcto para eliminar
             RetrofitClient.productApi.removeIngredientFromProduct(productId, ingredient.supplyItemId)
         }
 
         for (newIngredient in newIngredients) {
             val quantity = newIngredient.quantity.toDoubleOrNull()
             if (quantity != null && quantity > 0) {
-                RetrofitClient.productApi.addIngredientToProduct(productId, AddIngredientRequest(newIngredient.supplyItemId, quantity))
+                // Si el ingrediente ya existe en el backend, no lo volvemos a añadir
+                // Aquí podrías añadir lógica para actualizar la cantidad si ya existe
+                val existingBackendIngredient = currentBackendIngredients.find { it.supplyItemId == newIngredient.supplyItemId }
+                if (existingBackendIngredient == null) {
+                    RetrofitClient.productApi.addIngredientToProduct(productId, AddIngredientRequest(newIngredient.supplyItemId, quantity))
+                } else if (existingBackendIngredient.quantity != quantity) {
+                    // Si ya existe y la cantidad cambió, podrías optar por eliminarlo y volverlo a añadir
+                    // o tener un endpoint específico para actualizar la cantidad de un ingrediente.
+                    // Por simplicidad en este ejemplo, no se implementa una lógica de actualización directa aquí.
+                    // Se asume que AddIngredientToProduct podría manejar la actualización si el backend lo permite
+                    // o se necesitaría un DELETE + POST para actualizar.
+                    RetrofitClient.productApi.removeIngredientFromProduct(productId, existingBackendIngredient.supplyItemId)
+                    RetrofitClient.productApi.addIngredientToProduct(productId, AddIngredientRequest(newIngredient.supplyItemId, quantity))
+                }
             }
         }
     }
@@ -190,7 +204,7 @@ class AddEditProductViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                     if (productId != null) {
                         loadProductForEdit(productId!!)
                     } else {
-                        _uiState.value = AddEditProductUiState.ReadyForInput // *** CAMBIO CLAVE AQUÍ ***
+                        _uiState.value = AddEditProductUiState.ReadyForInput
                     }
                 } else {
                     _uiState.value = AddEditProductUiState.Error("Error al cargar los insumos disponibles")
@@ -215,11 +229,18 @@ class AddEditProductViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                         return@launch
                     }
 
+                    val availableSupplyItems = _formState.value.availableSupplyItems
+
                     val ingredients = product.ingredients.map { ingredient ->
+                        // Intenta usar el nombre y la unidad del ingrediente directamente de la respuesta del producto.
+                        // Si son nulos, busca en la lista de insumos disponibles.
+                        val supplyItemName = ingredient.name ?: availableSupplyItems.find { it.id == ingredient.supplyItemId }?.name ?: "Nombre de insumo no disponible"
+                        val unit = ingredient.unit ?: availableSupplyItems.find { it.id == ingredient.supplyItemId }?.unit ?: "unidad"
+
                         ProductIngredientForm(
                             supplyItemId = ingredient.supplyItemId,
-                            supplyItemName = ingredient.name,
-                            unit = ingredient.unit,
+                            supplyItemName = supplyItemName,
+                            unit = unit,
                             quantity = ingredient.quantity.toString()
                         )
                     }
@@ -231,7 +252,7 @@ class AddEditProductViewModel(savedStateHandle: SavedStateHandle) : ViewModel() 
                         selectedIngredients = ingredients
                     )
 
-                    _uiState.value = AddEditProductUiState.Editing(product) // Este es el estado para edición
+                    _uiState.value = AddEditProductUiState.Editing(product)
                 } else {
                     _uiState.value = AddEditProductUiState.Error("Error al cargar el producto para edición.")
                 }

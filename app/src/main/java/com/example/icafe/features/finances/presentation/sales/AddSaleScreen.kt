@@ -12,7 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material3.*
-import androidx.compose.runtime.* // Importa todo de runtime para remember, mutableStateOf, getValue, etc.
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,41 +21,42 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel // Importa viewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.icafe.core.Route
-import com.example.icafe.features.contacts.presentation.employee.ConfirmationDialog
+import com.example.icafe.features.finances.presentation.ConfirmationDialog
 import com.example.icafe.features.contacts.presentation.employee.StyledTextField
 import com.example.icafe.features.products.data.network.ProductResource
 import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.ui.theme.*
-import androidx.compose.ui.window.Dialog // Importa Dialog desde ui.window
-
-// <<<< ¡Se han eliminado las definiciones de UiState, SaleItemForm y ViewModel de aquí! >>>>
-// Deben estar ÚNICAMENTE en AddSaleViewModel.kt
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll // Importar verticalScroll
 
 // --- Composable de la UI (AddSaleScreen) ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSaleScreen(navController: NavController, portfolioId: String, selectedSedeId: String) {
-    // Aquí se inicializa el ViewModel, el cual contiene el UiState y la lógica
     val viewModel: AddSaleViewModel = viewModel(factory = AddSaleViewModel.Factory(portfolioId, selectedSedeId))
     val uiState by viewModel.uiState.collectAsState()
     val availableProducts by viewModel.availableProducts.collectAsState()
-    val selectedSaleItems = viewModel.selectedSaleItems // Accede a la lista inmutable del ViewModel
+    val selectedSaleItems = viewModel.selectedSaleItems
 
     var showConfirmationDialog by remember { mutableStateOf(false) }
     var showProductPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState) {
         if (uiState is AddSaleUiState.Success) {
-            navController.popBackStack() // Regresar a la lista de ventas
+            navController.popBackStack()
         }
+        // Puedes añadir lógica para mostrar un Snackbar en caso de errores aquí
+        // if (uiState is AddSaleUiState.Error) { /* show snackbar */ }
     }
     LaunchedEffect(Unit) {
         viewModel.events.collect { message ->
             // Aquí se podría mostrar un Snackbar para mensajes como "Producto ya agregado"
             // Para una aplicación real, integrarías un SnackbarHostState
+            // Por ejemplo: snackbarHostState.showSnackbar(message)
         }
     }
 
@@ -64,22 +65,27 @@ fun AddSaleScreen(navController: NavController, portfolioId: String, selectedSed
         navController = navController,
         portfolioId = portfolioId,
         selectedSedeId = selectedSedeId
-    ) {
+    ) { scaffoldInnerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(OffWhiteBackground)
-                .padding(16.dp)
+                .padding(scaffoldInnerPadding)
+                .padding(horizontal = 16.dp)
         ) {
             when (uiState) {
-                is AddSaleUiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                is AddSaleUiState.Loading, is AddSaleUiState.Processing -> {
+                    CircularProgressIndicator(color = OliveGreen, modifier = Modifier.align(Alignment.Center))
+                }
                 is AddSaleUiState.Error -> Text((uiState as AddSaleUiState.Error).message, color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
                 is AddSaleUiState.ReadyForInput, is AddSaleUiState.Success -> {
+                    val scrollState = rememberScrollState() // Crear un estado de desplazamiento
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(bottom = 60.dp) // Espacio para el FAB
                             .background(OffWhiteBackground)
+                            .verticalScroll(scrollState) // Habilitar el desplazamiento vertical
+                            .padding(bottom = 16.dp) // Añadir un padding inferior para que el último elemento no esté pegado al borde
                     ) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -123,7 +129,7 @@ fun AddSaleScreen(navController: NavController, portfolioId: String, selectedSed
                             } else {
                                 itemsIndexed(selectedSaleItems) { index, item ->
                                     SaleItemInput(
-                                        item = item, // Pasar el SaleItemForm completo
+                                        item = item,
                                         onQuantityChange = { qty -> viewModel.updateSaleItemQuantity(index, qty) },
                                         onRemove = { viewModel.removeSaleItem(index) }
                                     )
@@ -136,14 +142,16 @@ fun AddSaleScreen(navController: NavController, portfolioId: String, selectedSed
                         Button(
                             onClick = { showProductPicker = true },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = BrownMedium)
+                            colors = ButtonDefaults.buttonColors(containerColor = BrownMedium),
+                            enabled = !viewModel.isSubmitting
                         ) {
                             Icon(Icons.Default.Add, contentDescription = "Añadir Producto", tint = Color.White)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Añadir Producto", color = Color.White)
                         }
 
-                        Spacer(modifier = Modifier.weight(1f))
+                        // Eliminado: Spacer(modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.height(16.dp)) // Añadir un Spacer fijo si se necesita un poco de separación
 
                         // Total de la venta
                         Row(
@@ -162,9 +170,14 @@ fun AddSaleScreen(navController: NavController, portfolioId: String, selectedSed
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = OliveGreen),
-                            enabled = viewModel.customerId.isNotBlank() && selectedSaleItems.isNotEmpty()
+                            enabled = viewModel.customerId.isNotBlank() && selectedSaleItems.isNotEmpty() &&
+                                    !viewModel.isSubmitting
                         ) {
-                            Text("Registrar Venta", color = Color.White, fontSize = 18.sp)
+                            if (viewModel.isSubmitting) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                            } else {
+                                Text("Registrar Venta", color = Color.White, fontSize = 18.sp)
+                            }
                         }
                     }
                 }
@@ -180,13 +193,14 @@ fun AddSaleScreen(navController: NavController, portfolioId: String, selectedSed
                     },
                     onDismiss = { showConfirmationDialog = false },
                     backgroundColor = OliveGreen,
-                    textColor = Color.White
+                    textColor = Color.White,
+                    isConfirmEnabled = !viewModel.isSubmitting
                 )
             }
 
             // Diálogo para seleccionar productos
             if (showProductPicker) {
-                ProductPicker( // Llamar a la función Composable ProductPicker separada
+                ProductPicker(
                     products = availableProducts,
                     onProductSelected = { product ->
                         viewModel.addProductToSale(product)
@@ -199,7 +213,7 @@ fun AddSaleScreen(navController: NavController, portfolioId: String, selectedSed
     }
 }
 
-// Función Composable separada para el selector de productos
+// ProductPicker y SaleItemInput no necesitan cambios
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductPicker(
@@ -235,10 +249,9 @@ fun ProductPicker(
     }
 }
 
-// Composable para un ítem de producto dentro del formulario de venta
 @Composable
 fun SaleItemInput(
-    item: SaleItemForm, // Ahora recibe SaleItemForm completo
+    item: SaleItemForm,
     onQuantityChange: (String) -> Unit,
     onRemove: () -> Unit
 ) {
@@ -251,16 +264,15 @@ fun SaleItemInput(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(item.product.name, fontWeight = FontWeight.Medium, color = BrownDark) // Acceder a product.name
-            Text("S/. ${String.format("%.2f", item.unitPrice.toDoubleOrNull() ?: 0.0)}", fontSize = 12.sp, color = Color.Gray) // Acceder a item.unitPrice
+            Text(item.product.name, fontWeight = FontWeight.Medium, color = BrownDark)
+            Text("S/. ${String.format("%.2f", item.unitPrice.toDoubleOrNull() ?: 0.0)}", fontSize = 12.sp, color = Color.Gray)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Cantidad:", fontSize = 14.sp, color = BrownDark)
             Spacer(modifier = Modifier.width(8.dp))
             OutlinedTextField(
-                value = item.quantity, // Acceder a item.quantity
+                value = item.quantity,
                 onValueChange = { newValue ->
-                    // Validar que solo se ingresen números enteros
                     if (newValue.all { it.isDigit() } || newValue.isBlank()) {
                         onQuantityChange(newValue)
                     }

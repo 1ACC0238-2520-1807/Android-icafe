@@ -20,4 +20,8 @@ interface SalesApiService {
 
     @PUT("/api/v1/sales/{saleId}/cancel")
     suspend fun cancelSale(@Path("saleId") saleId: Long): Response<SaleResource>
+
+    @GET("/api/v1/sales")
+    suspend fun getAllSales(): Response<List<SaleResource>>
+
 }
