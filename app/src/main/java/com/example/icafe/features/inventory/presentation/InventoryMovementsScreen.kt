@@ -22,11 +22,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.icafe.features.home.presentation.scaffold.AppScaffold
 import com.example.icafe.features.inventory.data.network.InventoryTransactionResource
-import com.example.icafe.features.inventory.data.network.TransactionType // <-- AÑADIDO
+import com.example.icafe.features.inventory.data.network.TransactionType 
 import com.example.icafe.features.inventory.data.network.SupplyItemResource
-import com.example.icafe.ui.theme.* // Esto debería importar RedWarning si está en ui.theme
+import com.example.icafe.ui.theme.* 
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,103 +45,123 @@ fun InventoryMovementsScreen(navController: NavController, portfolioId: String, 
         navController = navController,
         portfolioId = portfolioId,
         selectedSedeId = selectedSedeId
-    ) { scaffoldInnerPadding ->
-        Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(OffWhiteBackground)
-                .padding(scaffoldInnerPadding),
-            containerColor = Color.Transparent
-        ) { innerScaffoldContentPadding ->
-            when (val state = uiState) {
-                is InventoryMovementsUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = OliveGreen)
-                    }
+    ) { scaffoldInnerPadding -> // Este es el padding del AppScaffold (TopBar y BottomBar)
+        val layoutDirection = LocalLayoutDirection.current // Obtener la dirección del layout
+
+        // Contenido principal de la pantalla, sin el Scaffold anidado
+        when (val state = uiState) {
+            is InventoryMovementsUiState.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(OffWhiteBackground)
+                        .padding(scaffoldInnerPadding), // Aplicar padding del AppScaffold
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = OliveGreen)
                 }
-                is InventoryMovementsUiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                            Text(state.message, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, modifier = Modifier.padding(16.dp))
-                            Button(
-                                onClick = { viewModel.loadMovements() },
-                                colors = ButtonDefaults.buttonColors(containerColor = OliveGreen)
-                            ) {
-                                Text("Reintentar", color = Color.White)
-                            }
-                        }
-                    }
-                }
-                is InventoryMovementsUiState.Success -> {
-                    if (state.movements.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(
-                                "No hay movimientos registrados para esta sede.",
-                                textAlign = TextAlign.Center,
-                                fontSize = 16.sp,
-                                color = Color.Gray,
-                                modifier = Modifier.padding(horizontal = 32.dp)
-                            )
-                        }
-                    } else {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(innerScaffoldContentPadding)
-                                .padding(horizontal = 16.dp, vertical = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            }
+            is InventoryMovementsUiState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(OffWhiteBackground)
+                        .padding(scaffoldInnerPadding), // Aplicar padding del AppScaffold
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Text(state.message, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, modifier = Modifier.padding(16.dp))
+                        Button(
+                            onClick = { viewModel.loadMovements() },
+                            colors = ButtonDefaults.buttonColors(containerColor = OliveGreen)
                         ) {
-                            Column(modifier = Modifier.weight(0.4f)) {
-                                Text(
-                                    text = "Movimientos",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BrownDark,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                                Card(
+                            Text("Reintentar", color = Color.White)
+                        }
+                    }
+                }
+            }
+            is InventoryMovementsUiState.Success -> {
+                if (state.movements.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(OffWhiteBackground)
+                            .padding(scaffoldInnerPadding), // Aplicar padding del AppScaffold
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No hay movimientos registrados para esta sede.",
+                            textAlign = TextAlign.Center,
+                            fontSize = 16.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(OffWhiteBackground) // Fondo principal para el contenido
+                            .padding(
+                                top = 16.dp, // Reducir el padding superior a un valor fijo más pequeño
+                                start = scaffoldInnerPadding.calculateStartPadding(layoutDirection) + 16.dp, // Añadir padding horizontal
+                                end = scaffoldInnerPadding.calculateEndPadding(layoutDirection) + 16.dp,   // Añadir padding horizontal
+                                bottom = scaffoldInnerPadding.calculateBottomPadding() // Mantener el padding inferior del Scaffold
+                            ),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Columna izquierda para la lista de movimientos
+                        Column(modifier = Modifier.weight(0.4f)) {
+                            Text(
+                                text = "Movimientos",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = BrownDark,
+                                modifier = Modifier.padding(bottom = 8.dp) // Mantener un pequeño padding aquí
+                            )
+                            Card(
+                                modifier = Modifier.fillMaxSize(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = BrownMedium)
+                            ) {
+                                LazyColumn(
                                     modifier = Modifier.fillMaxSize(),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = BrownMedium)
+                                    contentPadding = PaddingValues(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentPadding = PaddingValues(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        items(state.movements, key = { it.id }) { movement ->
-                                            MovementListItem(
-                                                movement = movement,
-                                                isSelected = movement == state.selectedMovement,
-                                                onClick = { viewModel.selectMovement(movement) }
-                                            )
-                                        }
+                                    items(state.movements, key = { it.id }) { movement ->
+                                        MovementListItem(
+                                            movement = movement,
+                                            isSelected = movement == state.selectedMovement,
+                                            onClick = { viewModel.selectMovement(movement) }
+                                        )
                                     }
                                 }
                             }
+                        }
 
-                            Column(modifier = Modifier.weight(0.6f)) {
-                                Text(
-                                    text = state.selectedMovement?.let { "Movimiento ${it.id}" } ?: "Seleccione un movimiento",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BrownDark,
-                                    modifier = Modifier.padding(bottom = 8.dp)
+                        // Columna derecha para el detalle del movimiento seleccionado
+                        Column(modifier = Modifier.weight(0.6f)) {
+                            Text(
+                                text = state.selectedMovement?.let { "Movimiento ${it.id}" } ?: "Seleccione un movimiento",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = BrownDark,
+                                modifier = Modifier.padding(bottom = 8.dp) // Mantener un pequeño padding aquí
+                            )
+                            state.selectedMovement?.let { selectedMovement ->
+                                MovementDetailCard(
+                                    movement = selectedMovement,
+                                    supplyItemDetails = state.supplyItemDetails
                                 )
-                                state.selectedMovement?.let { selectedMovement ->
-                                    MovementDetailCard(
-                                        movement = selectedMovement,
-                                        supplyItemDetails = state.supplyItemDetails
-                                    )
-                                } ?: run {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(LightGrayBackground, RoundedCornerShape(12.dp)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("No hay movimiento seleccionado", color = Color.Gray)
-                                    }
+                            } ?: run {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(LightGrayBackground, RoundedCornerShape(12.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("No hay movimiento seleccionado", color = Color.Gray)
                                 }
                             }
                         }
@@ -156,9 +180,9 @@ fun MovementListItem(
 ) {
     val backgroundColor = if (isSelected) Peach else LightGrayBackground
     val contentColor = if (isSelected) BrownDark else Color.Black
-    val indicatorColor = when (movement.type) { // Usar movement.type para el color
+    val indicatorColor = when (movement.type) {
         TransactionType.ENTRADA -> OliveGreen
-        TransactionType.SALIDA -> RedWarning // Aquí se usa RedWarning
+        TransactionType.SALIDA -> RedWarning
     }
 
     Card(
@@ -204,6 +228,7 @@ fun MovementDetailCard(movement: InventoryTransactionResource, supplyItemDetails
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState()) // Habilitar scroll vertical para el contenido del detalle
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -221,10 +246,10 @@ fun MovementDetailCard(movement: InventoryTransactionResource, supplyItemDetails
                     fontWeight = FontWeight.Medium
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    val demandText = movement.type.name // Usar el nombre del enum directamente
+                    val demandText = movement.type.name
                     val demandColor = when (movement.type) {
                         TransactionType.ENTRADA -> OliveGreen
-                        TransactionType.SALIDA -> RedWarning // Aquí se usa RedWarning
+                        TransactionType.SALIDA -> RedWarning
                     }
 
                     Card(
