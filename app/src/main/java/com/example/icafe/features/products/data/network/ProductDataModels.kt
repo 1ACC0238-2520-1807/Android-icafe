@@ -1,6 +1,6 @@
 package com.example.icafe.features.products.data.network
 
-import com.google.gson.annotations.SerializedName
+import com.google.gson.annotations.SerializedName // Importar SerializedName
 import com.example.icafe.features.inventory.data.network.UnitMeasureType // Necesario para ProductIngredientResource
 
 // Enum para el estado del producto (usado en ProductResource)
@@ -11,9 +11,10 @@ enum class ProductStatus {
 
 // === NUEVO: ProductIngredientResource (refleja la estructura ProductIngredient del backend) ===
 data class ProductIngredientResource(
+    @SerializedName("ingredientId") // <-- ¡ESTE ES EL CAMBIO MÁS IMPORTANTE!
     val supplyItemId: Long, // ID del insumo
-    val name: String?, // Nombre del insumo (de la respuesta del backend) - ¡Cambiado a nullable!
-    val unit: String?, // Unidad del SupplyItem (String) - ¡Cambiado a nullable!
+    val name: String?, // Nombre del insumo (de la respuesta del backend)
+    val unit: String?, // Unidad del SupplyItem (String)
     val quantity: Double // Cantidad requerida para este producto
 )
 

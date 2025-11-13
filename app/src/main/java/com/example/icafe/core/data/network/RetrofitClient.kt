@@ -12,11 +12,11 @@ import com.example.icafe.features.finances.data.network.SalesApiService
 import com.example.icafe.features.finances.data.network.PurchaseOrdersApiService
 import com.example.icafe.core.data.network.AuthApiService
 
-import com.example.icafe.core.data.network.LocalDateAdapter // Asumo que tienes un adaptador para LocalDate/LocalDateTime
-import com.example.icafe.core.data.network.LocalDateTimeAdapter // Asumo que tienes un adaptador para LocalDate/LocalDateTime
-
 import com.google.gson.GsonBuilder
 import java.util.concurrent.TimeUnit
+import java.time.LocalDate // <-- Importa LocalDate
+import java.time.LocalDateTime // <-- Importa LocalDateTime
+
 
 object RetrofitClient {
     private const val BASE_URL = "http://upc-icafebackend-3sger0-aa823d-31-97-13-234.traefik.me/"
@@ -26,8 +26,12 @@ object RetrofitClient {
         level = HttpLoggingInterceptor.Level.NONE // Cambiado de .BODY a .NONE
     }
 
+    // --- MODIFICACIÓN AQUÍ: Registrar los TypeAdapters para LocalDate y LocalDateTime ---
     private val gson = GsonBuilder()
+        .registerTypeAdapter(LocalDate::class.java, LocalDateAdapter()) // Registra el adaptador para LocalDate
+        .registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeAdapter()) // Registra el adaptador para LocalDateTime
         .create()
+    // ---------------------------------------------------------------------------------
 
     private val httpClient = OkHttpClient.Builder()
         .addInterceptor(AuthInterceptor())
@@ -40,7 +44,7 @@ object RetrofitClient {
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(httpClient)
-        .addConverterFactory(GsonConverterFactory.create(gson))
+        .addConverterFactory(GsonConverterFactory.create(gson)) // Usa el objeto Gson con los adaptadores registrados
         .build()
 
     val authApi: AuthApiService by lazy {
