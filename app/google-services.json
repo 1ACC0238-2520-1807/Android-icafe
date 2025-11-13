@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "892002161154",
+    "project_id": "proyecto-android-icafe",
+    "storage_bucket": "proyecto-android-icafe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:892002161154:android:b7ff4a0dbfb60be018cd1b",
+        "android_client_info": {
+          "package_name": "com.example.icafe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDXG6pKrFMc0vIq5R5qc0xqc958A1M-z0A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
