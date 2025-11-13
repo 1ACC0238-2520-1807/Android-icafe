@@ -120,9 +120,10 @@ class AddPurchaseOrderViewModel(savedStateHandle: SavedStateHandle) : ViewModel(
 
                 if (response.isSuccessful && response.body() != null) {
                     val purchaseOrderResource = response.body()!!
-                    Log.d("AddPurchaseOrderVM", "Purchase order created (ID: ${purchaseOrderResource.id}), attempting to register inventory movement for supplyItemId: ${purchaseOrderResource.supplyItemId}")
-                    // Registrar movimiento de inventario (ENTRADA)
-                    val transaction = CreateInventoryTransactionResource(
+                    Log.d("AddPurchaseOrderVM", "Purchase order created (ID: ${purchaseOrderResource.id})")
+                    _uiState.value = AddPurchaseOrderUiState.Success("Orden de compra registrada exitosamente y stock actualizado. ID: ${purchaseOrderResource.id}")
+                    // Registrar movimiento de inventario (ENTRADA) No es necesario esto ya que el backend lo hace por eventos de dominio
+                    /*val transaction = CreateInventoryTransactionResource(
                         supplyItemId = purchaseOrderResource.supplyItemId,
                         branchId = purchaseOrderResource.branchId,
                         type = TransactionType.ENTRADA, // Es una entrada de inventario
@@ -138,7 +139,7 @@ class AddPurchaseOrderViewModel(savedStateHandle: SavedStateHandle) : ViewModel(
                         val errorBody = inventoryResponse.errorBody()?.string() ?: "Error desconocido al registrar movimiento de inventario."
                         Log.e("AddPurchaseOrderVM", "Error registering inventory movement: ${inventoryResponse.code()} - $errorBody")
                         _uiState.value = AddPurchaseOrderUiState.Error("Error al registrar movimiento de inventario: ${inventoryResponse.code()} - $errorBody")
-                    }
+                    }*/
 
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Error al registrar orden de compra."
