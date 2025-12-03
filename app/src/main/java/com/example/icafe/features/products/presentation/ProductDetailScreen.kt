@@ -129,12 +129,8 @@ fun ProductDetailScreen(
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 itemsIndexed( // <-- Usar itemsIndexed
-                                    items = product.ingredients,
-                                    key = { index: Int, ingredient: ProductIngredientResource ->
-                                        val generatedKey = "${ingredient.supplyItemId}-${index}"
-                                        Log.d("LazyColumnKeyDebug", "Generated key: $generatedKey for ingredient ID: ${ingredient.supplyItemId}, index: $index, name: ${ingredient.name}") // <-- Log de depuración
-                                        generatedKey
-                                    }
+                                    items = product.ingredients ?: emptyList(),
+                                    key = { index: Int, _ -> index } // Usar índice como clave única ya que los IDs pueden repetirse
                                 ) { index: Int, ingredient: ProductIngredientResource ->
                                     IngredientDisplayItemReadOnly(
                                         name = ingredient.name ?: "Desconocido",

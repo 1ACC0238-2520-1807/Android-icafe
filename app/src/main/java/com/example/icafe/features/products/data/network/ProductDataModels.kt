@@ -8,9 +8,9 @@ enum class ProductStatus {
 }
 // === NUEVO: ProductIngredientResource (refleja la estructura ProductIngredient del backend) ===
 data class ProductIngredientResource(
-    val supplyItemId: Long, // ID del insumo
-    val name: String?, // Nombre del insumo (de la respuesta del backend) - ¡Cambiado a nullable!
-    val unit: String?, // Unidad del SupplyItem (String) - ¡Cambiado a nullable!
+    @SerializedName("ingredientId") val supplyItemId: Long, // ID del insumo (mapeado desde ingredientId)
+    var name: String? = null, // Nombre del insumo (se llena manualmente)
+    var unit: String? = null, // Unidad del SupplyItem (se llena manualmente)
     val quantity: Double // Cantidad requerida para este producto
 )
 // Modelo que recibimos del backend para un producto

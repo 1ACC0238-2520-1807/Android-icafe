@@ -50,8 +50,27 @@ class ProductDetailViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
                         return@launch
                     }
 
+                    // Enriquecer ingredientes con nombres y unidades
+                    if (!product.ingredients.isNullOrEmpty()) {
+                        try {
+                            val supplyItemsResponse = RetrofitClient.productApi.getSupplyItemsByBranch(branchId)
+                            if (supplyItemsResponse.isSuccessful && supplyItemsResponse.body() != null) {
+                                val supplyItemsMap = supplyItemsResponse.body()!!.associateBy { it.id }
+                                product.ingredients.forEach { ingredient ->
+                                    val supplyItem = supplyItemsMap[ingredient.supplyItemId]
+                                    if (supplyItem != null) {
+                                        ingredient.name = supplyItem.name
+                                        ingredient.unit = supplyItem.unit
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("ProductDetailViewModel", "Error fetching supply items details: ${e.message}")
+                        }
+                    }
+
                     // *** AÑADIR ESTE LOG AQUÍ PARA DEPURAR LOS INGREDIENTES RECIBIDOS ***
-                    product.ingredients.forEachIndexed { index, ingredient ->
+                    product.ingredients?.forEachIndexed { index, ingredient ->
                         Log.d("ViewModelIngredient", "API Response Ingredient (Index $index): supplyItemId=${ingredient.supplyItemId}, name=${ingredient.name}, unit=${ingredient.unit}, quantity=${ingredient.quantity}")
                     }
 

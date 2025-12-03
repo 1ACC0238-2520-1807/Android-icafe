@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -115,7 +116,10 @@ fun AddEditProductScreen(
                                     .fillMaxWidth()
                                     .heightIn(max = 200.dp)
                             ) {
-                                items(formState.selectedIngredients, key = { it.supplyItemId }) { ingredient ->
+                                itemsIndexed(
+                                    items = formState.selectedIngredients,
+                                    key = { index, _ -> index }
+                                ) { index, ingredient ->
                                     IngredientDisplayItem(
                                         ingredient = ingredient,
                                         onQuantityChange = { newQty ->
