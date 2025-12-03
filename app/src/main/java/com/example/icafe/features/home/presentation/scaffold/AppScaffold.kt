@@ -184,7 +184,7 @@ fun AppScaffold(
         ) { paddingValues -> // ¡¡¡CAMBIO CLAVE AQUÍ!!! El Scaffold de Material3 te da los paddingValues
             // Superficie que aplica el padding proporcionado por el Scaffold
             Surface(modifier = Modifier.padding(paddingValues)) {
-                content(paddingValues) // ¡¡¡CAMBIO CLAVE AQUÍ!!! Pasa los paddingValues a la lambda de contenido
+                content(PaddingValues(bottom = 16.dp))
             }
         }
     }
